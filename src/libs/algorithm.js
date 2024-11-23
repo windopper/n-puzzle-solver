@@ -1,3 +1,5 @@
+import { move, isGoal } from "./puzzle";
+
 /**
  * 상태 트리 노드를 정의합니다.
  *
@@ -5,21 +7,8 @@
  * children 배열에 이동 가능한 상태들을 추가하여 트리를 구성합니다.
  */
 class PuzzleState {
-  // 노드의 고유 ID
   id = Math.random().toString(16).slice(2);
-
-  /**
-   * @param {number[][]} puzzle 퍼즐의 초기 상태
-   */
-
-  /**
-   * @param {PuzzleState} parent 부모 노드
-   */
   parent;
-
-  /**
-   * @param {PuzzleState[]} children 해당 퍼즐 상태에서 이동 가능한 상태들
-   */
   children = [];
 
   constructor(puzzle, parent) {
@@ -34,14 +23,7 @@ class PuzzleState {
  * unsolvable() 메서드를 사용하여 해결 불가능한 경우를 반환합니다.
  */
 class Result {
-  /**
-   * @param {number} total_attempts 전체 시도 횟수
-   */
   total_attempts;
-
-  /**
-   * @param {number} least_attempts 최소 시도 횟수
-   */
   least_attempts;
 
   constructor(total_attempts, least_attempts) {
@@ -49,10 +31,6 @@ class Result {
     this.least_attempts = least_attempts;
   }
 
-  /**
-   * 해결 불가능한 경우를 반환합니다.
-   * @returns {Result} 해결 불가능한 경우 반환
-   */
   static unsolvable() {
     return new Result(1, -1);
   }
@@ -65,6 +43,37 @@ class Result {
  * @returns {Result} 알고리즘 실행 결과를 나타내는 객체입니다.
  * 해결 불가능한 경우 Result.unsolvable()을 반환합니다.
  */
-function solve(initialNode) {}
+function solve(initialNode) {
+  const queue = [];
+  const visited = new Set();
+  let attempts = 0;
+
+  queue.push({ node: initialNode, depth: 0 });
+  visited.add(JSON.stringify(initialNode.puzzle));
+
+  while (queue.length > 0) {
+    const { node, depth } = queue.shift();
+    attempts++;
+
+    if (isGoal(node.puzzle)) {
+      return new Result(attempts, depth);
+    }
+
+    const directions = ["up", "down", "left", "right"];
+    for (const direction of directions) {
+      const newPuzzle = move(node.puzzle, direction);
+      const puzzleKey = JSON.stringify(newPuzzle);
+
+      if (!visited.has(puzzleKey)) {
+        visited.add(puzzleKey);
+        const childNode = new PuzzleState(newPuzzle, node);
+        node.children.push(childNode);
+        queue.push({ node: childNode, depth: depth + 1 });
+      }
+    }
+  }
+
+  return Result.unsolvable();
+}
 
 export { PuzzleState, Result, solve };
