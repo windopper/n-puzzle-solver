@@ -6,5 +6,5 @@
  */
 export default function InitializePuzzleButton({ initialize }) {
   // 구현 필요
-  return <div>퍼즐 초기화 버튼 만들어주세요</div>;
+  return <button onClick={initialize}>랜덤 초기화</button>;
 }

@@ -43,6 +43,9 @@ export default function Dashboard({ options, setOptions, onInitialize }) {
         textAlign: "center",
         paddingBottom: "2rem",
         paddingTop: "2rem",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
       }}
     >
       <PuzzleSizeSelect size={size} changeSize={changeSize} />

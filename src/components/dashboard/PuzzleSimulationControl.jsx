@@ -33,13 +33,6 @@ export default function PuzzleSimulationControl({
         >
           ⏹ Stop
         </button>
-        <button
-          style={{padding: "10px 20px", margin: "0 5px", fontSize:16 }}
-          onClick={() => changeSimulationState("reset")
-          }disabled={simulationState === "reset"}
-        >
-          🔄 reset
-        </button>
       </div>
     </div>
   );

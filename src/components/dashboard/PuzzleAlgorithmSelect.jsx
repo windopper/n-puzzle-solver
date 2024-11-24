@@ -8,7 +8,7 @@ export default function PuzzleAlgorithmSelect({ algorithm, changeAlgorithm }) {
   const algorithms = [
     { label: "changeAlgorithm", value: "bfs" },
     { label: "changeAlgorithm", value: "dfs" },
-    { label: "changeAlgorithm" },
+    { label: "changeAlgorithm", value: "astar" },
     { label: "changeAlgorithm", value: "greedy" },
     { label: "changeAlgorithm", value: "random" },
   ];
@@ -19,7 +19,10 @@ export default function PuzzleAlgorithmSelect({ algorithm, changeAlgorithm }) {
 
   return (
     <div style={{ padding: 20, textAlign: "center" }}>
-      <label htmlFor="algorithm-select" style={{ marginRight: 10, fontSize: 16 }}>
+      <label
+        htmlFor="algorithm-select"
+        style={{ marginRight: 10, fontSize: 16 }}
+      >
         퍼즐 알고리즘 선택:
       </label>
       <select
@@ -30,7 +33,7 @@ export default function PuzzleAlgorithmSelect({ algorithm, changeAlgorithm }) {
       >
         {algorithms.map((algo) => (
           <option key={algo.value} value={algo.value}>
-            {algo.label}
+            {algo.value}
           </option>
         ))}
       </select>

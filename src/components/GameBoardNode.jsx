@@ -5,11 +5,15 @@ import NPuzzle from "./NPuzzle";
  * 퍼즐 노드를 렌더링합니다
  */
 export default function GameBoardNode({ node }) {
+  const { isSiblingOfCorrectRoute, correctRoute, children, parent } = node;
+
   return (
     <>
-      <Handle type="target" position={Position.Left} />
+      {parent && <Handle type="target" position={Position.Left} />}
       <NPuzzle node={node} />
-      <Handle type="source" position={Position.Right} />
+      {children.length !== 0 && (
+        <Handle type="source" position={Position.Right} />
+      )}
     </>
   );
 }

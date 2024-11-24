@@ -1,4 +1,25 @@
+import PriorityQueue from "./PriorityQueue";
 import { move, isGoal } from "./puzzle";
+import { manhattanDistance } from "./util";
+
+export const SolveState = {
+  _isPaused: false,
+  _isStopped: false,
+
+  get isPaused() {
+    return this._isPaused;
+  },
+  set isPaused(value) {
+    this._isPaused = value;
+  },
+
+  get isStopped() {
+    return this._isStopped;
+  },
+  set isStopped(value) {
+    this._isStopped = value;
+  },
+};
 
 /**
  * 상태 트리 노드를 정의합니다.
@@ -10,6 +31,13 @@ class PuzzleState {
   id = Math.random().toString(16).slice(2);
   parent;
   children = [];
+
+  // 문제 해결 후 경로를 추적하기 위한 추가 필드
+  // true시에 경로에 포함되는 노드
+  correctRoute = false;
+
+  // true시에 현재 노드의 부모 노드가 경로에 포함되는 노드
+  isSiblingOfCorrectRoute = false;
 
   constructor(puzzle, parent) {
     this.puzzle = puzzle;
@@ -25,6 +53,7 @@ class PuzzleState {
 class Result {
   total_attempts;
   least_attempts;
+  last_node;
 
   constructor(total_attempts, least_attempts) {
     this.total_attempts = total_attempts;
@@ -36,14 +65,34 @@ class Result {
   }
 }
 
+const directions = ["up", "down", "left", "right"];
 /**
  * 퍼즐을 해결하기 위한 알고리즘을 구현합니다.
  *
  * @param {PuzzleState} initialNode 초기 상태 트리 노드
+ * @param {"bfs" | "dfs" | "astar" | "greedy" | "random"} algorithm 알고리즘 종류 (bfs, dfs, astar, greedy, random)
  * @returns {Result} 알고리즘 실행 결과를 나타내는 객체입니다.
  * 해결 불가능한 경우 Result.unsolvable()을 반환합니다.
  */
-function solve(initialNode) {
+async function solve(initialNode, algorithm = "bfs") {
+  console.log(`알고리즘: ${algorithm} 으로 퍼즐 해결 시도 중...`);
+  switch (algorithm) {
+    case "bfs":
+      return solveWithBFS(initialNode);
+    case "dfs":
+      return solveWithDFS(initialNode);
+    case "astar":
+      return solveWithAStar(initialNode);
+    case "greedy":
+      return solveWithGreedy(initialNode);
+    case "random":
+      return solveWithRandomWalk(initialNode);
+    default:
+      throw new Error("Unsupported algorithm");
+  }
+}
+
+async function solveWithBFS(initialNode) {
   const queue = [];
   const visited = new Set();
   let attempts = 0;
@@ -60,10 +109,11 @@ function solve(initialNode) {
     attempts++;
 
     if (isGoal(node.puzzle)) {
-      return new Result(attempts, depth);
+      const result = new Result(attempts, depth);
+      result.last_node = node;
+      return result;
     }
 
-    const directions = ["up", "down", "left", "right"];
     for (const direction of directions) {
       const newPuzzle = move(node.puzzle, direction);
       const puzzleKey = JSON.stringify(newPuzzle);
@@ -74,6 +124,204 @@ function solve(initialNode) {
         node.children.push(childNode);
         queue.push({ node: childNode, depth: depth + 1 });
       }
+    }
+
+    // 브라우저가 먹통이 되지 않도록 비동기 처리
+    if (attempts % 100 === 0) {
+      while (SolveState.isPaused) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+
+    // 사용자가 중지를 요청한 경우
+    if (SolveState.isStopped) {
+      return Result.unsolvable();
+    }
+  }
+
+  return Result.unsolvable();
+}
+
+async function solveWithDFS(initialNode) {
+  const stack = [];
+  const visited = new Set();
+  let attempts = 0;
+
+  if (!isSolvable(initialNode.puzzle, initialNode.puzzle.length)) {
+    return Result.unsolvable();
+  }
+
+  stack.push({ node: initialNode, depth: 0 });
+  visited.add(JSON.stringify(initialNode.puzzle));
+
+  while (stack.length > 0) {
+    const { node, depth } = stack.pop();
+    attempts++;
+
+    if (isGoal(node.puzzle)) {
+      const result = new Result(attempts, depth);
+      result.last_node = node;
+      return result;
+    }
+
+    for (const direction of directions) {
+      const newPuzzle = move(node.puzzle, direction);
+      const puzzleKey = JSON.stringify(newPuzzle);
+
+      if (!visited.has(puzzleKey)) {
+        visited.add(puzzleKey);
+        const childNode = new PuzzleState(newPuzzle, node);
+        node.children.push(childNode);
+        stack.push({ node: childNode, depth: depth + 1 });
+      }
+    }
+
+    if (attempts % 100 === 0) {
+      while (SolveState.isPaused) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+  }
+
+  return Result.unsolvable();
+}
+
+async function solveWithAStar(initialNode) {
+  const pq = new PriorityQueue(
+    (a, b) =>
+      (a.fScore = a.depth + manhattanDistance(a.node.puzzle)) <
+      (b.fScore = b.depth + manhattanDistance(b.node.puzzle))
+  );
+  const visited = new Set();
+  let attempts = 0;
+
+  if (!isSolvable(initialNode.puzzle, initialNode.puzzle.length)) {
+    return Result.unsolvable();
+  }
+
+  pq.push({ node: initialNode, depth: 0 });
+  visited.add(JSON.stringify(initialNode.puzzle));
+
+  while (!pq.isEmpty()) {
+    const { node, depth } = pq.pop();
+    attempts++;
+
+    if (isGoal(node.puzzle)) {
+      const result = new Result(attempts, depth);
+      result.last_node = node;
+      return result;
+    }
+
+    for (const direction of directions) {
+      const newPuzzle = move(node.puzzle, direction);
+      const puzzleKey = JSON.stringify(newPuzzle);
+
+      if (!visited.has(puzzleKey)) {
+        visited.add(puzzleKey);
+        const childNode = new PuzzleState(newPuzzle, node);
+        node.children.push(childNode);
+        pq.push({ node: childNode, depth: depth + 1 });
+      }
+    }
+
+    if (attempts % 100 === 0) {
+      while (SolveState.isPaused) {
+        console.log("A* 알고리즘 일시정지");
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+  }
+
+  return Result.unsolvable();
+}
+
+async function solveWithGreedy(initialNode) {
+  const pq = new PriorityQueue(
+    (a, b) =>
+      manhattanDistance(a.node.puzzle) < manhattanDistance(b.node.puzzle)
+  );
+  const visited = new Set();
+  let attempts = 0;
+
+  if (!isSolvable(initialNode.puzzle, initialNode.puzzle.length)) {
+    return Result.unsolvable();
+  }
+
+  pq.push({ node: initialNode, depth: 0 });
+  visited.add(JSON.stringify(initialNode.puzzle));
+
+  while (!pq.isEmpty()) {
+    const { node, depth } = pq.pop();
+    attempts++;
+
+    if (isGoal(node.puzzle)) {
+      const result = new Result(attempts, depth);
+      result.last_node = node;
+      return result;
+    }
+
+    for (const direction of directions) {
+      const newPuzzle = move(node.puzzle, direction);
+      const puzzleKey = JSON.stringify(newPuzzle);
+
+      if (!visited.has(puzzleKey)) {
+        visited.add(puzzleKey);
+        const childNode = new PuzzleState(newPuzzle, node);
+        node.children.push(childNode);
+        pq.push({ node: childNode, depth: depth + 1 });
+      }
+    }
+
+    if (attempts % 100 === 0) {
+      while (SolveState.isPaused) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
+  }
+
+  return Result.unsolvable();
+}
+
+async function solveWithRandomWalk(initialNode) {
+  let currentNode = initialNode;
+  let depth = 0;
+  let attempts = 0;
+  const maxAttempts = 200000; // 무한 루프 방지를 위한 최대 시도 횟수
+
+  if (!isSolvable(initialNode.puzzle, initialNode.puzzle.length)) {
+    return Result.unsolvable();
+  }
+
+  while (attempts < maxAttempts) {
+    attempts++;
+
+    if (isGoal(currentNode.puzzle)) {
+      const result = new Result(attempts, depth);
+      result.last_node = currentNode;
+      return result;
+    }
+
+    // 랜덤한 방향 선택
+    const randomDirection =
+      directions[Math.floor(Math.random() * directions.length)];
+    const newPuzzle = move(currentNode.puzzle, randomDirection);
+
+    if (newPuzzle) {
+      const childNode = new PuzzleState(newPuzzle, currentNode);
+      currentNode.children.push(childNode);
+      currentNode = childNode;
+      depth++;
+    }
+
+    if (attempts % 100 === 0) {
+      while (SolveState.isPaused) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      await new Promise((resolve) => setTimeout(resolve, 0));
     }
   }
 
@@ -128,4 +376,26 @@ function isSolvable(puzzle, n) {
   }
 }
 
-export { PuzzleState, Result, solve, isSolvable };
+// 경로 추적을 위한 함수
+function backTrackCorrectRouteAndSibling(node) {
+  let current = node;
+  while (current) {
+    current.correctRoute = true;
+    if (current.parent) {
+      for (const sibling of current.parent.children) {
+        if (sibling !== current) {
+          sibling.isSiblingOfCorrectRoute = true;
+        }
+      }
+    }
+    current = current.parent;
+  }
+}
+
+export {
+  PuzzleState,
+  Result,
+  solve,
+  isSolvable,
+  backTrackCorrectRouteAndSibling,
+};
