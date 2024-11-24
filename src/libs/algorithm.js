@@ -48,6 +48,10 @@ function solve(initialNode) {
   const visited = new Set();
   let attempts = 0;
 
+  if (!isSolvable(initialNode.puzzle, initialNode.puzzle.length)) {
+    return Result.unsolvable();
+  }
+
   queue.push({ node: initialNode, depth: 0 });
   visited.add(JSON.stringify(initialNode.puzzle));
 
@@ -76,4 +80,52 @@ function solve(initialNode) {
   return Result.unsolvable();
 }
 
-export { PuzzleState, Result, solve };
+/**
+ *
+ * @param {number[][]} puzzle
+ * @param {number} n
+ * @returns
+ */
+function isSolvable(puzzle, n) {
+  puzzle = puzzle.flat();
+  // 입력 유효성 검사 추가
+  if (!Array.isArray(puzzle) || puzzle.length !== n * n) {
+    throw new Error("Invalid puzzle input");
+  }
+
+  // 숫자 범위 검사 (0부터 n*n-1까지의 숫자만 허용)
+  const validNumbers = puzzle.every((num) => num >= 0 && num < n * n);
+  if (!validNumbers) {
+    throw new Error("Invalid numbers in puzzle");
+  }
+
+  let inversions = 0;
+  let blankRow = 0;
+
+  // 빈 칸(0)을 제외한 숫자들의 순서쌍을 확인하여 inversion 계산
+  for (let i = 0; i < puzzle.length - 1; i++) {
+    if (puzzle[i] === 0) {
+      blankRow = Math.floor(i / n);
+      continue;
+    }
+
+    for (let j = i + 1; j < puzzle.length; j++) {
+      if (puzzle[j] !== 0 && puzzle[i] > puzzle[j]) {
+        inversions++;
+      }
+    }
+  }
+
+  // N이 홀수인 경우
+  if (n % 2 === 1) {
+    return inversions % 2 === 0;
+  }
+  // N이 짝수인 경우
+  else {
+    // 빈 칸의 행 번호를 아래에서부터 카운트
+    const blankRowFromBottom = n - blankRow;
+    return (inversions + blankRowFromBottom) % 2 === 0;
+  }
+}
+
+export { PuzzleState, Result, solve, isSolvable };

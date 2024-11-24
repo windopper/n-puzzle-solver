@@ -1,4 +1,4 @@
-import { PuzzleState, Result, solve } from "../src/libs/algorithm";
+import { isSolvable, PuzzleState, Result, solve } from "../src/libs/algorithm";
 
 describe("8-퍼즐 알고리즘 테스트", () => {
   test("초기 상태가 이미 목표 상태인 경우", () => {
@@ -47,14 +47,15 @@ describe("8-퍼즐 알고리즘 테스트", () => {
   test("해결 불가능한 케이스", () => {
     const unsolvablePuzzle = [
       [1, 2, 3],
-      [4, 5, 6],
+      [5, 6, 4],
       [8, 7, 0],
     ];
 
     const initialNode = new PuzzleState(unsolvablePuzzle, null);
     const result = solve(initialNode);
 
-    expect(result.total_attempts).toBeGreaterThanOrEqual(1);
-    expect(result.least_attempts).toBe(-1); // 해결 불가능한 경우 -1 반환
+    expect(result).toBeInstanceOf(Result);
+    expect(result.total_attempts).toBe(1);
+    expect(result.least_attempts).toBe(-1);
   });
 });
