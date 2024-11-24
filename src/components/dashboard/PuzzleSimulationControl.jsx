@@ -8,5 +8,39 @@ export default function PuzzleSimulationControl({
   simulationState,
   changeSimulationState,
 }) {
-  return <div>퍼즐 시뮬레이션을 제어하는 기능을 만들어주세요.</div>;
+  return (
+    <div style={{ padding: 20, textAlign: "center" }}>
+      <h3>시뮬레이션 상태: {simulationState}</h3>
+      <div style={{ marginTop: 10 }}>
+        <button
+          style={{ padding: "10px 20px", margin: "0 5px", fontSize: 16 }}
+          onClick={() => changeSimulationState("play")}
+          disabled={simulationState === "play"}
+        >
+          ▶ Play
+        </button>
+        <button
+          style={{ padding: "10px 20px", margin: "0 5px", fontSize: 16 }}
+          onClick={() => changeSimulationState("pause")}
+          disabled={simulationState === "pause"}
+        >
+          ⏸ Pause
+        </button>
+        <button
+          style={{ padding: "10px 20px", margin: "0 5px", fontSize: 16 }}
+          onClick={() => changeSimulationState("stop")}
+          disabled={simulationState === "stop"}
+        >
+          ⏹ Stop
+        </button>
+        <button
+          style={{padding: "10px 20px", margin: "0 5px", fontSize:16 }}
+          onClick={() => changeSimulationState("reset")
+          }disabled={simulationState === "reset"}
+        >
+          🔄 reset
+        </button>
+      </div>
+    </div>
+  );
 }
