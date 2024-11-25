@@ -37,7 +37,7 @@ const edgeTypes = {
 const createXYFlowNode = (node, stack) => {
   return {
     id: node.id,
-    position: { x: 0, y: 0 },
+    position: { x: node.depth * 220, y: 0 },
     type: "gameBoardNode",
     data: {
       node: node,
@@ -118,8 +118,9 @@ const getLayoutedElements = (nodes, edges, options) => {
   nodes.forEach((node) =>
     g.setNode(node.id, {
       ...node,
-      width: node.measured?.width ?? 0,
-      height: node.measured?.height ?? 0,
+      width: 250, height: 250
+      // width: node.measured?.width ?? 0,
+      // height: node.measured?.height ?? 0,
     })
   );
 
@@ -128,8 +129,8 @@ const getLayoutedElements = (nodes, edges, options) => {
   return {
     nodes: nodes.map((node) => {
       const position = g.node(node.id);
-      const x = position.x - (node.measured?.width ?? 0) / 2;
-      const y = position.y - (node.measured?.height ?? 0) / 2;
+      const x = position.x - 250 / 2;
+      const y = position.y - 250 / 2;
 
       return { ...node, position: { x, y } };
     }),
@@ -138,7 +139,7 @@ const getLayoutedElements = (nodes, edges, options) => {
 };
 
 function App() {
-  const { fitView } = useReactFlow();
+  const { fitView, setViewport, setCenter } = useReactFlow();
   const [options, setOptions] = useState({
     size: 3, // 퍼즐 사이즈
     algorithm: "bfs", // 선택된 휴리스틱 알고리즘
@@ -175,22 +176,26 @@ function App() {
         return;
       }
 
-      try {
-        console.log("노드 레이아웃 계산 시작", nodes.length);
-        const layouted = getLayoutedElements(nodes, edges, { direction });
+      setTimeout(() => {
+        try {
+          console.log("노드 레이아웃 계산 시작", nodes.length);
+          const layouted = getLayoutedElements(nodes, edges, { direction });
+  
+          setNodes([...layouted.nodes]);
+          setEdges([...layouted.edges]);
 
-        setNodes([...layouted.nodes]);
-        setEdges([...layouted.edges]);
+          setTimeout(() => {
+            window.requestAnimationFrame(() => {
+              fitView();
+            });
+          }, 500);
 
-        // Use RAF for smoother layout transition
-        window.requestAnimationFrame(() => {
-          fitView();
-        });
+          console.log("레이아웃 계산 완료");
+        } catch (error) {
+          console.error("레이아웃 계산 실패", error);
+        }
+      }, 500)
 
-        console.log("레이아웃 계산 완료");
-      } catch (error) {
-        console.error("레이아웃 계산 실패", error);
-      }
     },
     [nodes, edges, fitView]
   );
@@ -234,8 +239,6 @@ function App() {
         }
       }
 
-      console.log(result);
-
       if (result.least_attempts === -1) {
         console.log("해결 불가능한 퍼즐입니다.");
         setSolveState("idle");
@@ -265,7 +268,7 @@ function App() {
   const onLayoutSpecificNode = useCallback(
     (nodes) => {
       window.requestAnimationFrame(() => {
-        fitView({ nodes, minZoom: 0.1, duration: 400 });
+        fitView({ nodes, minZoom: 0.1, duration: 400, padding: 0.1 });
       });
     },
     [fitView]
@@ -301,19 +304,10 @@ function App() {
   // 레이아웃 업데이트가 필요한 경우 레이아웃 업데이트
   useEffect(() => {
     if (solveState === "solved" && layoutUpdateRequired.current) {
-      // 렌더링이 완료된 후 150ms 후에 레이아웃 업데이트
-      const timer = setTimeout(() => {
-        console.log("레이아웃 업데이트 시작");
-        onLayout("LR");
-        setSolveState("idle");
-        layoutUpdateRequired.current = false;
-
-        // 왜 두번 호출해야 하는지 모르겠지만, 한번만 호출하면 레이아웃이 업데이트 되지 않음
-        setTimeout(() => {
-          onLayout("LR");
-        }, 200);
-      }, 150);
-      return () => clearTimeout(timer);
+      console.log("레이아웃 업데이트 시작");
+      onLayout("LR");
+      setSolveState("idle");
+      layoutUpdateRequired.current = false;
     }
   }, [solveState, onLayout]);
 
@@ -329,6 +323,7 @@ function App() {
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         fitView
+        nodesDraggable={false}
         maxZoom={1.5}
         minZoom={0.01}
       >

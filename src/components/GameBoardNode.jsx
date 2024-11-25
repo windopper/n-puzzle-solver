@@ -1,10 +1,11 @@
 import { Handle, Position } from "@xyflow/react";
 import NPuzzle from "./NPuzzle";
+import React from "react";
 
 /**
  * 퍼즐 노드를 렌더링합니다
  */
-export default function GameBoardNode({ data }) {
+function GameBoardNode({ data }) {
   const { node, stack } = data;
   const { isSiblingOfCorrectRoute, correctRoute, children, parent } = node;
 
@@ -32,3 +33,5 @@ export default function GameBoardNode({ data }) {
     </>
   );
 }
+
+export default React.memo(GameBoardNode);
