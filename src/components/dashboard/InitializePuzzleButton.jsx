@@ -1,3 +1,5 @@
+import { Button } from "@mui/material";
+
 /**
  * 퍼즐 초기화 버튼 컴포넌트
  *
@@ -6,5 +8,5 @@
  */
 export default function InitializePuzzleButton({ initialize }) {
   // 구현 필요
-  return <button onClick={initialize}>랜덤 초기화</button>;
+  return <Button onClick={initialize}>랜덤 초기화</Button>;
 }

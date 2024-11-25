@@ -1,3 +1,12 @@
+import {
+  Box,
+  Chip,
+  FormControl,
+  InputLabel,
+  MenuItem,
+  Select,
+} from "@mui/material";
+
 /**
  * 퍼즐 알고리즘 선택 컴포넌트
  *
@@ -13,30 +22,30 @@ export default function PuzzleAlgorithmSelect({ algorithm, changeAlgorithm }) {
     { label: "changeAlgorithm", value: "random" },
   ];
 
-  const handleAlgorithmChange = (event) => {
-    changeAlgorithm(event.target.value);
+  const handleAlgorithmChange = (value) => {
+    changeAlgorithm(value);
   };
 
   return (
-    <div style={{ padding: 20, textAlign: "center" }}>
-      <label
-        htmlFor="algorithm-select"
-        style={{ marginRight: 10, fontSize: 16 }}
-      >
-        퍼즐 알고리즘 선택:
-      </label>
-      <select
-        id="algorithm-select"
-        value={algorithm}
-        onChange={handleAlgorithmChange}
-        style={{ padding: 5, fontSize: 16 }}
-      >
-        {algorithms.map((algo) => (
-          <option key={algo.value} value={algo.value}>
-            {algo.value}
-          </option>
-        ))}
-      </select>
-    </div>
+    <Box
+      sx={{
+        gap: 1,
+        display: "flex",
+        flexDirection: "row",
+        justifyContent: "center",
+        alignItems: "center",
+        width: "100%",
+      }}
+    >
+      {algorithms.map((algo) => (
+        <Chip
+          key={algo.value}
+          onClick={() => handleAlgorithmChange(algo.value)}
+          label={algo.value}
+          variant={algorithm === algo.value ? "filled" : "outlined"}
+          color="primary"
+        />
+      ))}
+    </Box>
   );
 }

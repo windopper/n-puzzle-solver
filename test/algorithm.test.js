@@ -9,10 +9,19 @@ describe("8-퍼즐 알고리즘 테스트", () => {
     ];
 
     const initialNode = new PuzzleState(goalState, null);
-    const result = await solve(initialNode);
+    const solver = solve(initialNode);
+    let result;
+
+    while (true) {
+      const { done, value } = await solver.next();
+      if (done) {
+        result = value;
+        break;
+      }
+    }
 
     expect(result).toBeInstanceOf(Result);
-    expect(result.total_attempts).toBe(1);
+    expect(result.attempts).toBe(1);
     expect(result.least_attempts).toBe(0);
   });
 
@@ -24,9 +33,18 @@ describe("8-퍼즐 알고리즘 테스트", () => {
     ];
 
     const initialNode = new PuzzleState(initialPuzzle, null);
-    const result = await solve(initialNode);
+    const solver = solve(initialNode);
+    let result;
 
-    expect(result.total_attempts).toBeGreaterThanOrEqual(1);
+    while (true) {
+      const { done, value } = await solver.next();
+      if (done) {
+        result = value;
+        break;
+      }
+    }
+
+    expect(result.attempts).toBeGreaterThanOrEqual(1);
     expect(result.least_attempts).toBe(1);
   });
 
@@ -38,9 +56,18 @@ describe("8-퍼즐 알고리즘 테스트", () => {
     ];
 
     const initialNode = new PuzzleState(initialPuzzle, null);
-    const result = await solve(initialNode);
+    const solver = solve(initialNode);
+    let result;
 
-    expect(result.total_attempts).toBeGreaterThanOrEqual(1);
+    while (true) {
+      const { done, value } = await solver.next();
+      if (done) {
+        result = value;
+        break;
+      }
+    }
+
+    expect(result.attempts).toBeGreaterThanOrEqual(1);
     expect(result.least_attempts).toBeGreaterThan(1);
   });
 
@@ -52,10 +79,19 @@ describe("8-퍼즐 알고리즘 테스트", () => {
     ];
 
     const initialNode = new PuzzleState(unsolvablePuzzle, null);
-    const result = await solve(initialNode);
+    const solver = solve(initialNode);
+    let result;
+
+    while (true) {
+      const { done, value } = await solver.next();
+      if (done) {
+        result = value;
+        break;
+      }
+    }
 
     expect(result).toBeInstanceOf(Result);
-    expect(result.total_attempts).toBe(1);
+    expect(result.attempts).toBe(1);
     expect(result.least_attempts).toBe(-1);
   });
 });

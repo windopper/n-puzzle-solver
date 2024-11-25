@@ -1,10 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import Dagre from "@dagrejs/dagre";
 import {
   ReactFlow,
@@ -23,28 +17,31 @@ import GameBoardNode from "./components/GameBoardNode";
 import Dashboard from "./components/dashboard/Dashboard";
 import {
   backTrackCorrectRouteAndSibling,
-  isPaused,
   isSolvable,
   SolveState,
   PuzzleState,
   solve,
 } from "./libs/algorithm";
-import { createRandomNode } from "./libs/util";
 import { generateNewPuzzle } from "./libs/puzzle";
+import RouteStepper from "./components/RouteStepper";
+import RouteEdge from "./components/edge/RouteEdge";
 
 const nodeTypes = {
-  gameBoardNode: ({ data }) => {
-    return <GameBoardNode {...data} />;
-  },
+  gameBoardNode: GameBoardNode,
 };
 
-const createXYFlowNode = (node) => {
+const edgeTypes = {
+  routeEdge: RouteEdge,
+};
+
+const createXYFlowNode = (node, stack) => {
   return {
     id: node.id,
     position: { x: 0, y: 0 },
     type: "gameBoardNode",
     data: {
       node: node,
+      stack: stack,
     },
   };
 };
@@ -54,7 +51,11 @@ const createXYFlowEdge = (source, target) => {
     id: `${source.id}-${target.id}`,
     source: source.id,
     target: target.id,
-    style: { strokeDasharray: "5, 5", strokeWidth: 1, stroke: "black" },
+    style: { strokeDasharray: "5, 5", strokeWidth: 3, stroke: "black" },
+    type: "routeEdge",
+    data: {
+      route: target.direction,
+    },
     animated: true,
   };
 };
@@ -73,15 +74,17 @@ const createXYFlowSiblingEdge = (source, target) => {
  * xyflow의 노드와 엣지를 생성합니다.
  *
  * @param {PuzzleState} rootNode
+ * @param {number} depth
+ * @param {number} stack 올바른 경로가 아닌 경우 증가하는 스택
  */
-function createXYFlowNodesAndEdges(rootNode, depth = 0, peer = 0) {
+function createXYFlowNodesAndEdges(rootNode, depth = 0, stack = 0) {
   const currentId = rootNode.id;
   let nodes = [];
-  nodes.push(createXYFlowNode(rootNode));
+  nodes.push(createXYFlowNode(rootNode, stack));
 
   let edges = [];
 
-  if (!rootNode.correctRoute) return [nodes, edges];
+  if (!rootNode.correctRoute && stack == 1) return [nodes, edges];
 
   for (let i = 0; i < rootNode.children.length; i++) {
     const next = rootNode.children[i];
@@ -91,14 +94,14 @@ function createXYFlowNodesAndEdges(rootNode, depth = 0, peer = 0) {
     const [nextNodes, nextEdges] = createXYFlowNodesAndEdges(
       next,
       depth + 1,
-      i
+      !rootNode.correctRoute ? stack + 1 : 0
     );
 
     nodes = [...nodes, ...nextNodes];
     edges = [
       ...edges,
       ...nextEdges,
-      isSibling
+      isSibling || !rootNode.correctRoute
         ? createXYFlowSiblingEdge(rootNode, next)
         : createXYFlowEdge(rootNode, next),
     ];
@@ -152,6 +155,9 @@ function App() {
   // solved 문제를 해결 한 후 레이아웃 업데이트
   const [solveState, setSolveState] = useState("idle");
 
+  // 중간 결과
+  const [intermediateResults, setIntermediateResults] = useState({});
+
   // 레이아웃 업데이트가 필요한지 여부
   const layoutUpdateRequired = useRef(false);
 
@@ -200,14 +206,35 @@ function App() {
     setNodes([createXYFlowNode(rootNode)]);
     setEdges([]);
     setSolveState("idle");
-    fitView();
-  }, [options, setEdges, setNodes]);
+    setIntermediateResults({});
+    setTimeout(() => {
+      fitView();
+    }, 100);
+  }, [
+    options,
+    setEdges,
+    setNodes,
+    setSolveState,
+    setIntermediateResults,
+    fitView,
+  ]);
 
   // 퍼즐 풀기 버튼 클릭 시 호출되는 함수
   const onSolve = useCallback(async () => {
     setSolveState("solving");
     try {
-      const result = await solve(rootNode, options.algorithm);
+      const solver = solve(rootNode, options.algorithm);
+      let result;
+      while (true) {
+        const { done, value } = await solver.next();
+        setIntermediateResults(value);
+        if (done) {
+          result = value;
+          break;
+        }
+      }
+
+      console.log(result);
 
       if (result.least_attempts === -1) {
         console.log("해결 불가능한 퍼즐입니다.");
@@ -234,6 +261,16 @@ function App() {
     }
   }, [rootNode, setEdges, setNodes, options]);
 
+  // 특정 노드에 포커스를 맞추는 함수
+  const onLayoutSpecificNode = useCallback(
+    (nodes) => {
+      window.requestAnimationFrame(() => {
+        fitView({ nodes, minZoom: 0.1, duration: 400 });
+      });
+    },
+    [fitView]
+  );
+
   // 초기 노드 생성
   useEffect(() => {
     onInitialize();
@@ -244,15 +281,17 @@ function App() {
     const handleAsync = async () => {
       if (options.simulationState === "play") {
         SolveState.isPaused = false;
+        SolveState.isStopped = false;
         if (solveState === "idle") {
           const result = await onSolve();
-          console.log(result);
         }
       } else if (options.simulationState === "pause") {
         SolveState.isPaused = true;
+        SolveState.isStopped = false;
       } else if (options.simulationState === "stop") {
         SolveState.isStopped = true;
         SolveState.isPaused = false;
+        rootNode?.clearChildren();
       }
     };
 
@@ -288,27 +327,32 @@ function App() {
         onNodeClick={(event, node) => console.log("click", node)}
         onConnect={onConnect}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         fitView
         maxZoom={1.5}
-        minZoom={0.1}
+        minZoom={0.01}
       >
         <Background variant="dots" gap={12} size={1} />
         <Panel position="top-right">
-          <button
-            onClick={() => onLayout("LR")}
-            disabled={solveState === "solving"}
-          >
-            정렬하기
-          </button>
+          <Dashboard
+            solveState={solveState}
+            options={options}
+            setOptions={setOptions}
+            setRootNode={setRootNode}
+            onLayout={onLayout}
+            onInitialize={onInitialize}
+            intermediateResults={intermediateResults}
+          />
+        </Panel>
+        <Panel position="bottom-center">
+          <RouteStepper
+            rootNode={rootNode}
+            solveState={solveState}
+            onFocus={onLayoutSpecificNode}
+          />
         </Panel>
         <MiniMap position="top-left" />
       </ReactFlow>
-      <Dashboard
-        options={options}
-        setOptions={setOptions}
-        setRootNode={setRootNode}
-        onInitialize={onInitialize}
-      />
     </div>
   );
 }

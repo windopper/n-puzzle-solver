@@ -31,6 +31,8 @@ class PuzzleState {
   id = Math.random().toString(16).slice(2);
   parent;
   children = [];
+  depth = 0;
+  direction = "";
 
   // 문제 해결 후 경로를 추적하기 위한 추가 필드
   // true시에 경로에 포함되는 노드
@@ -39,9 +41,14 @@ class PuzzleState {
   // true시에 현재 노드의 부모 노드가 경로에 포함되는 노드
   isSiblingOfCorrectRoute = false;
 
-  constructor(puzzle, parent) {
+  constructor(puzzle, parent, direction = "") {
     this.puzzle = puzzle;
     this.parent = parent;
+    this.direction = direction;
+  }
+
+  clearChildren() {
+    this.children = [];
   }
 }
 
@@ -51,12 +58,12 @@ class PuzzleState {
  * unsolvable() 메서드를 사용하여 해결 불가능한 경우를 반환합니다.
  */
 class Result {
-  total_attempts;
+  attempts;
   least_attempts;
   last_node;
 
   constructor(total_attempts, least_attempts) {
-    this.total_attempts = total_attempts;
+    this.attempts = total_attempts;
     this.least_attempts = least_attempts;
   }
 
@@ -74,25 +81,52 @@ const directions = ["up", "down", "left", "right"];
  * @returns {Result} 알고리즘 실행 결과를 나타내는 객체입니다.
  * 해결 불가능한 경우 Result.unsolvable()을 반환합니다.
  */
-async function solve(initialNode, algorithm = "bfs") {
+async function* solve(initialNode, algorithm = "bfs") {
   console.log(`알고리즘: ${algorithm} 으로 퍼즐 해결 시도 중...`);
+
+  let solver;
   switch (algorithm) {
     case "bfs":
-      return solveWithBFS(initialNode);
+      solver = solveWithBFS(initialNode);
+      break;
     case "dfs":
-      return solveWithDFS(initialNode);
+      solver = solveWithDFS(initialNode);
+      break;
     case "astar":
-      return solveWithAStar(initialNode);
+      solver = solveWithAStar(initialNode);
+      break;
     case "greedy":
-      return solveWithGreedy(initialNode);
+      solver = solveWithGreedy(initialNode);
+      break;
     case "random":
-      return solveWithRandomWalk(initialNode);
+      solver = solveWithRandomWalk(initialNode);
+      break;
     default:
       throw new Error("Unsupported algorithm");
   }
+
+  while (true) {
+    const { value, done } = await solver.next();
+    if (done) {
+      return value;
+    }
+
+    if (value === "paused") {
+      while (SolveState.isPaused) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    } else {
+      // promise per 100 attempts
+      if (value.attempts % 100 === 0) {
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+    }
+
+    yield value;
+  }
 }
 
-async function solveWithBFS(initialNode) {
+async function* solveWithBFS(initialNode) {
   const queue = [];
   const visited = new Set();
   let attempts = 0;
@@ -101,15 +135,15 @@ async function solveWithBFS(initialNode) {
     return Result.unsolvable();
   }
 
-  queue.push({ node: initialNode, depth: 0 });
+  queue.push({ node: initialNode });
   visited.add(JSON.stringify(initialNode.puzzle));
 
   while (queue.length > 0) {
-    const { node, depth } = queue.shift();
+    const { node } = queue.shift();
     attempts++;
 
     if (isGoal(node.puzzle)) {
-      const result = new Result(attempts, depth);
+      const result = new Result(attempts, node.depth);
       result.last_node = node;
       return result;
     }
@@ -120,30 +154,37 @@ async function solveWithBFS(initialNode) {
 
       if (!visited.has(puzzleKey)) {
         visited.add(puzzleKey);
-        const childNode = new PuzzleState(newPuzzle, node);
+        const childNode = new PuzzleState(newPuzzle, node, direction);
+        childNode.depth = node.depth + 1;
         node.children.push(childNode);
-        queue.push({ node: childNode, depth: depth + 1 });
+        queue.push({ node: childNode });
       }
     }
 
-    // 브라우저가 먹통이 되지 않도록 비동기 처리
+    // 100번마다 상태를 반환
     if (attempts % 100 === 0) {
-      while (SolveState.isPaused) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      }
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      yield {
+        attempts,
+        currentDepth: node.depth,
+        queueSize: queue.length,
+        visited: visited.size,
+      };
+    }
+
+    if (SolveState.isPaused) {
+      yield "paused";
     }
 
     // 사용자가 중지를 요청한 경우
     if (SolveState.isStopped) {
-      return Result.unsolvable();
+      throw new Error("사용자가 중지를 요청했습니다.");
     }
   }
 
   return Result.unsolvable();
 }
 
-async function solveWithDFS(initialNode) {
+async function* solveWithDFS(initialNode) {
   const stack = [];
   const visited = new Set();
   let attempts = 0;
@@ -152,15 +193,15 @@ async function solveWithDFS(initialNode) {
     return Result.unsolvable();
   }
 
-  stack.push({ node: initialNode, depth: 0 });
+  stack.push({ node: initialNode });
   visited.add(JSON.stringify(initialNode.puzzle));
 
   while (stack.length > 0) {
-    const { node, depth } = stack.pop();
+    const { node } = stack.pop();
     attempts++;
 
     if (isGoal(node.puzzle)) {
-      const result = new Result(attempts, depth);
+      const result = new Result(attempts, node.depth);
       result.last_node = node;
       return result;
     }
@@ -171,28 +212,40 @@ async function solveWithDFS(initialNode) {
 
       if (!visited.has(puzzleKey)) {
         visited.add(puzzleKey);
-        const childNode = new PuzzleState(newPuzzle, node);
+        const childNode = new PuzzleState(newPuzzle, node, direction);
+        childNode.depth = node.depth + 1;
         node.children.push(childNode);
-        stack.push({ node: childNode, depth: depth + 1 });
+        stack.push({ node: childNode });
       }
     }
 
     if (attempts % 100 === 0) {
-      while (SolveState.isPaused) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      }
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      yield {
+        attempts,
+        currentDepth: node.depth,
+        queueSize: stack.length,
+        visited: visited.size,
+      };
+    }
+
+    if (SolveState.isPaused) {
+      yield "paused";
+    }
+
+    // 사용자가 중지를 요청한 경우
+    if (SolveState.isStopped) {
+      throw new Error("사용자가 중지를 요청했습니다.");
     }
   }
 
   return Result.unsolvable();
 }
 
-async function solveWithAStar(initialNode) {
+async function* solveWithAStar(initialNode) {
   const pq = new PriorityQueue(
     (a, b) =>
-      (a.fScore = a.depth + manhattanDistance(a.node.puzzle)) <
-      (b.fScore = b.depth + manhattanDistance(b.node.puzzle))
+      (a.fScore = a.node.depth + manhattanDistance(a.node.puzzle)) <
+      (b.fScore = b.node.depth + manhattanDistance(b.node.puzzle))
   );
   const visited = new Set();
   let attempts = 0;
@@ -201,15 +254,15 @@ async function solveWithAStar(initialNode) {
     return Result.unsolvable();
   }
 
-  pq.push({ node: initialNode, depth: 0 });
+  pq.push({ node: initialNode });
   visited.add(JSON.stringify(initialNode.puzzle));
 
   while (!pq.isEmpty()) {
-    const { node, depth } = pq.pop();
+    const { node } = pq.pop();
     attempts++;
 
     if (isGoal(node.puzzle)) {
-      const result = new Result(attempts, depth);
+      const result = new Result(attempts, node.depth);
       result.last_node = node;
       return result;
     }
@@ -220,25 +273,36 @@ async function solveWithAStar(initialNode) {
 
       if (!visited.has(puzzleKey)) {
         visited.add(puzzleKey);
-        const childNode = new PuzzleState(newPuzzle, node);
+        const childNode = new PuzzleState(newPuzzle, node, direction);
+        childNode.depth = node.depth + 1;
         node.children.push(childNode);
-        pq.push({ node: childNode, depth: depth + 1 });
+        pq.push({ node: childNode });
       }
     }
 
     if (attempts % 100 === 0) {
-      while (SolveState.isPaused) {
-        console.log("A* 알고리즘 일시정지");
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      }
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      yield {
+        attempts,
+        currentDepth: node.depth,
+        queueSize: pq.values.length,
+        visited: visited.size,
+      };
+    }
+
+    if (SolveState.isPaused) {
+      yield "paused";
+    }
+
+    // 사용자가 중지를 요청한 경우
+    if (SolveState.isStopped) {
+      throw new Error("사용자가 중지를 요청했습니다.");
     }
   }
 
   return Result.unsolvable();
 }
 
-async function solveWithGreedy(initialNode) {
+async function* solveWithGreedy(initialNode) {
   const pq = new PriorityQueue(
     (a, b) =>
       manhattanDistance(a.node.puzzle) < manhattanDistance(b.node.puzzle)
@@ -250,15 +314,15 @@ async function solveWithGreedy(initialNode) {
     return Result.unsolvable();
   }
 
-  pq.push({ node: initialNode, depth: 0 });
+  pq.push({ node: initialNode });
   visited.add(JSON.stringify(initialNode.puzzle));
 
   while (!pq.isEmpty()) {
-    const { node, depth } = pq.pop();
+    const { node } = pq.pop();
     attempts++;
 
     if (isGoal(node.puzzle)) {
-      const result = new Result(attempts, depth);
+      const result = new Result(attempts, node.depth);
       result.last_node = node;
       return result;
     }
@@ -269,24 +333,36 @@ async function solveWithGreedy(initialNode) {
 
       if (!visited.has(puzzleKey)) {
         visited.add(puzzleKey);
-        const childNode = new PuzzleState(newPuzzle, node);
+        const childNode = new PuzzleState(newPuzzle, node, direction);
+        childNode.depth = node.depth + 1;
         node.children.push(childNode);
-        pq.push({ node: childNode, depth: depth + 1 });
+        pq.push({ node: childNode });
       }
     }
 
     if (attempts % 100 === 0) {
-      while (SolveState.isPaused) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      }
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      yield {
+        attempts,
+        currentDepth: node.depth,
+        queueSize: pq.values.length,
+        visited: visited.size,
+      };
+    }
+
+    if (SolveState.isPaused) {
+      yield "paused";
+    }
+
+    // 사용자가 중지를 요청한 경우
+    if (SolveState.isStopped) {
+      throw new Error("사용자가 중지를 요청했습니다.");
     }
   }
 
   return Result.unsolvable();
 }
 
-async function solveWithRandomWalk(initialNode) {
+async function* solveWithRandomWalk(initialNode) {
   let currentNode = initialNode;
   let depth = 0;
   let attempts = 0;
@@ -311,17 +387,30 @@ async function solveWithRandomWalk(initialNode) {
     const newPuzzle = move(currentNode.puzzle, randomDirection);
 
     if (newPuzzle) {
-      const childNode = new PuzzleState(newPuzzle, currentNode);
+      const childNode = new PuzzleState(
+        newPuzzle,
+        currentNode,
+        randomDirection
+      );
       currentNode.children.push(childNode);
       currentNode = childNode;
       depth++;
     }
 
     if (attempts % 100 === 0) {
-      while (SolveState.isPaused) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      }
-      await new Promise((resolve) => setTimeout(resolve, 0));
+      yield {
+        attempts,
+        currentDepth: depth,
+      };
+    }
+
+    if (SolveState.isPaused) {
+      yield "paused";
+    }
+
+    // 사용자가 중지를 요청한 경우
+    if (SolveState.isStopped) {
+      throw new Error("사용자가 중지를 요청했습니다.");
     }
   }
 

@@ -3,12 +3,12 @@
  *
  * puzzle
  */
-export default function NPuzzle({ node }) {
+export default function NPuzzle({ node, stack }) {
   const { puzzle, correctRoute, isSiblingOfCorrectRoute, parent } = node;
   const isRootNode = !parent;
 
   return (
-    <div style={{ padding: 30 }}>
+    <div style={{ padding: 5 }}>
       <div
         style={{
           display: "grid",
@@ -21,7 +21,11 @@ export default function NPuzzle({ node }) {
             correctRoute || isRootNode ? (
               <CorrectRouteNode key={`${rowIndex}-${colIndex}`} tile={tile} />
             ) : (
-              <SiblingNode key={`${rowIndex}-${colIndex}`} tile={tile} />
+              <SiblingNode
+                key={`${rowIndex}-${colIndex}`}
+                tile={tile}
+                stack={stack}
+              />
             )
           )
         )}
@@ -51,7 +55,14 @@ function CorrectRouteNode({ tile }) {
   );
 }
 
-function SiblingNode({ tile }) {
+function SiblingNode({ tile, stack }) {
+  let opacity = 0.7;
+  if (stack == 1) {
+    opacity = 0.5;
+  } else if (stack == 2) {
+    opacity = 0.1;
+  }
+
   return (
     <div
       style={{
@@ -65,6 +76,7 @@ function SiblingNode({ tile }) {
         color: tile === 0 ? "transparent" : "#fff",
         fontSize: 18,
         fontWeight: "bold",
+        opacity,
       }}
     >
       {tile !== 0 ? tile : ""}
