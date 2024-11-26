@@ -20,6 +20,8 @@
     "start": "react-scripts start",
     "build": "react-scripts build",
     "test": "jest",
+    "deploy": "gh-pages -d build",
+    "predeploy": "npm run build",
     "test:puzzle": "jest --testMatch='**/puzzle.test.js'",
     "test:algorithm": "jest --testMatch='**/algorithm.test.js'",
     "eject": "react-scripts eject"
@@ -46,6 +48,8 @@
     "@babel/cli": "^7.25.9",
     "@babel/core": "^7.26.0",
     "@babel/preset-env": "^7.26.0",
+    "gh-pages": "^6.2.0",
     "jest": "^27.5.1"
-  }
+  },
+  "homepage": "https://windopper.github.io/n-puzzle-solver"
 }
