@@ -16,6 +16,7 @@ import History from "./History";
  */
 export default function Dashboard({ children }) {
   const {
+    rootNode,
     solveState,
     onLayout,
     options,
@@ -57,6 +58,10 @@ export default function Dashboard({ children }) {
 
   const changeSimulationState = useCallback(
     (newSimulationState) => {
+      if (newSimulationState === "stop") {
+        onInitialize(rootNode.puzzle)
+      }
+
       setOptions((prev) => ({ ...prev, simulationState: newSimulationState }));
     },
     [setOptions]

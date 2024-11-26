@@ -79,7 +79,7 @@ export default function RouteStepper({ rootNode, solveState, onFocus }) {
       previousRootNode.current = rootNode;
       setBreadcrumbs([]);
     }
-
+    
     if (solveState === "solved") {
       const breadcrumbs = [];
       while (current) {

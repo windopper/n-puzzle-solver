@@ -146,6 +146,7 @@ function App() {
     try {
       const solver = solve(rootNode, options.algorithm);
       let result;
+
       while (true) {
         const { done, value } = await solver.next();
         setIntermediateResults(value);
@@ -170,7 +171,7 @@ function App() {
       setSolveState("solved");
       const newOptions = { ...options, simulationState: "stop" };
       setOptions(newOptions);
-      addHistory(nextNodes, nextEdges, result, newOptions, rootNode);
+      addHistory(nextNodes, nextEdges, result, newOptions, rootNode, "solved");
 
       setLayoutUpdateRequired(true);
 
@@ -192,8 +193,9 @@ function App() {
     [fitView]
   );
 
-  const addHistory = useCallback((nodes, edges, intermediateResults, options, rootNode) => {
+  const addHistory = useCallback((nodes, edges, intermediateResults, options, rootNode, solveState) => {
     const hist = {
+      solveState: solveState,
       nodes: [...nodes],
       edges: [...edges],
       result: intermediateResults,
@@ -219,6 +221,7 @@ function App() {
         data: { ...edge.data },
       }));
 
+      setSolveState(hist.solveState);
       setNodes(clonedNodes);
       setEdges(clonedEdges);
       setIntermediateResults(hist.result);
@@ -233,6 +236,7 @@ function App() {
       setOptions,
       setRootNode,
       setLayoutUpdateRequired,
+      setSolveState,
       history,
     ]
   );
@@ -257,7 +261,6 @@ function App() {
       } else if (options.simulationState === "stop") {
         SolveState.isStopped = true;
         SolveState.isPaused = false;
-        rootNode?.clearChildren();
       }
     };
 
@@ -270,7 +273,7 @@ function App() {
       console.log("레이아웃 업데이트 시작");
       onLayout("LR");
       // 레이아웃 업데이트 후 상태 초기화
-      if (solveState === "solved") setSolveState("idle");
+      // if (solveState === "solved") setSolveState("idle");
       setLayoutUpdateRequired(false);
     }
   }, [solveState, onLayout, layoutUpdateRequired, setLayoutUpdateRequired]);
