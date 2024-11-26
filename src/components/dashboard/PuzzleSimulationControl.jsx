@@ -1,3 +1,5 @@
+import { Button, Grid2 } from "@mui/material";
+
 /**
  * 퍼즐 시뮬레이션을 제어하는 컴포넌트
  *
@@ -9,38 +11,26 @@ export default function PuzzleSimulationControl({
   changeSimulationState,
 }) {
   return (
-    <div style={{ padding: 20, textAlign: "center" }}>
-      <h3>시뮬레이션 상태: {simulationState}</h3>
-      <div style={{ marginTop: 10 }}>
-        <button
-          style={{ padding: "10px 20px", margin: "0 5px", fontSize: 16 }}
-          onClick={() => changeSimulationState("play")}
-          disabled={simulationState === "play"}
-        >
-          ▶ Play
-        </button>
-        <button
-          style={{ padding: "10px 20px", margin: "0 5px", fontSize: 16 }}
-          onClick={() => changeSimulationState("pause")}
-          disabled={simulationState === "pause"}
-        >
-          ⏸ Pause
-        </button>
-        <button
-          style={{ padding: "10px 20px", margin: "0 5px", fontSize: 16 }}
-          onClick={() => changeSimulationState("stop")}
-          disabled={simulationState === "stop"}
-        >
-          ⏹ Stop
-        </button>
-        <button
-          style={{padding: "10px 20px", margin: "0 5px", fontSize:16 }}
-          onClick={() => changeSimulationState("reset")
-          }disabled={simulationState === "reset"}
-        >
-          🔄 reset
-        </button>
-      </div>
-    </div>
+    <Grid2 container spacing={2}>
+      <Button
+        onClick={() => changeSimulationState("play")}
+        disabled={simulationState === "play"}
+        variant="contained"
+      >
+        ▶ Solve
+      </Button>
+      <Button
+        onClick={() => changeSimulationState("pause")}
+        disabled={simulationState === "pause"}
+      >
+        ⏸ Pause
+      </Button>
+      <Button
+        onClick={() => changeSimulationState("stop")}
+        disabled={simulationState === "stop"}
+      >
+        ⏹ Stop
+      </Button>
+    </Grid2>
   );
 }

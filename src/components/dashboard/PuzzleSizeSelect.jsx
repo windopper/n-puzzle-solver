@@ -1,3 +1,5 @@
+import { Box, FormControl, InputLabel, MenuItem, Select } from "@mui/material";
+
 /**
  * 퍼즐 사이즈 선택 컴포넌트
  *
@@ -11,22 +13,22 @@ export default function PuzzleSizeSelect({ size, changeSize }) {
   };
 
   return (
-    <div style={{ padding: 20, textAlign: "center" }}>
-      <label htmlFor="puzzle-size-select" style={{ marginRight: 10, fontSize: 16 }}>
-        퍼즐 사이즈 선택:
-      </label>
-      <select
-        id="puzzle-size-select"
-        value={size}
-        onChange={handleSizeChange}
-        style={{ padding: 5, fontSize: 16 }}
-      >
-        <option value={3}>3 x 3</option>
-        <option value={4}>4 x 4</option>
-        <option value={5}>5 x 5</option>
-        <option value={6}>6 x 6</option>
-        <option value={7}>7 x 7</option>
-      </select>
-    </div>
+    <Box sx={{ flexGrow: 1 }}>
+      <FormControl fullWidth>
+        <InputLabel id="puzzle-size-select-label">Puzzle Size</InputLabel>
+        <Select
+          labelId="puzzle-size-select-label"
+          id="puzzle-size-select"
+          value={size}
+          onChange={handleSizeChange}
+        >
+          <MenuItem value={3}>3 x 3</MenuItem>
+          <MenuItem value={4}>4 x 4</MenuItem>
+          <MenuItem value={5}>5 x 5</MenuItem>
+          <MenuItem value={6}>6 x 6</MenuItem>
+          <MenuItem value={7}>7 x 7</MenuItem>
+        </Select>
+      </FormControl>
+    </Box>
   );
 }

@@ -27,3 +27,26 @@ export function createRandomNode(size = 3) {
 
   return rootNode;
 }
+
+/**
+ *
+ * @param {number[][]} puzzle
+ */
+export function manhattanDistance(puzzle) {
+  const n = puzzle.length;
+  let distance = 0;
+
+  for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n; j++) {
+      const value = puzzle[i][j];
+      if (value === 0) continue;
+
+      const targetY = Math.floor(value / n);
+      const targetX = value % n;
+
+      distance += Math.abs(i - targetY) + Math.abs(j - targetX);
+    }
+  }
+
+  return distance;
+}
