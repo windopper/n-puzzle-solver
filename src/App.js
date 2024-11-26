@@ -1,5 +1,10 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import Dagre from "@dagrejs/dagre";
+import React, {
+  createContext,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useState,
+} from "react";
 import {
   ReactFlow,
   useNodesState,
@@ -13,7 +18,6 @@ import {
 } from "@xyflow/react";
 
 import "@xyflow/react/dist/style.css";
-import GameBoardNode from "./components/GameBoardNode";
 import Dashboard from "./components/dashboard/Dashboard";
 import {
   backTrackCorrectRouteAndSibling,
@@ -25,121 +29,27 @@ import {
 import { generateNewPuzzle } from "./libs/puzzle";
 import RouteStepper from "./components/RouteStepper";
 import RouteEdge from "./components/edge/RouteEdge";
+import GameBoardInitialNode from "./components/node/GameBoardInitialNode";
+import {
+  createInitialXYFlowNode,
+  createXYFlowNodesAndEdges,
+  getLayoutedElements,
+} from "./libs/flow";
+import GameBoardNodeWithTool from "./components/node/GameBoardNodeWithTool";
 
 const nodeTypes = {
-  gameBoardNode: GameBoardNode,
+  gameBoardNode: GameBoardNodeWithTool,
+  gameBoardInitialNode: GameBoardInitialNode,
 };
 
 const edgeTypes = {
   routeEdge: RouteEdge,
 };
 
-const createXYFlowNode = (node, stack) => {
-  return {
-    id: node.id,
-    position: { x: node.depth * 220, y: 0 },
-    type: "gameBoardNode",
-    data: {
-      node: node,
-      stack: stack,
-    },
-  };
-};
-
-const createXYFlowEdge = (source, target) => {
-  return {
-    id: `${source.id}-${target.id}`,
-    source: source.id,
-    target: target.id,
-    style: { strokeDasharray: "5, 5", strokeWidth: 3, stroke: "black" },
-    type: "routeEdge",
-    data: {
-      route: target.direction,
-    },
-    animated: true,
-  };
-};
-
-const createXYFlowSiblingEdge = (source, target) => {
-  return {
-    id: `${source.id}-${target.id}`,
-    source: source.id,
-    target: target.id,
-    style: { strokeDasharray: "5, 5", strokeWidth: 1, stroke: "gray" },
-    animated: true,
-  };
-};
-
-/**
- * xyflow의 노드와 엣지를 생성합니다.
- *
- * @param {PuzzleState} rootNode
- * @param {number} depth
- * @param {number} stack 올바른 경로가 아닌 경우 증가하는 스택
- */
-function createXYFlowNodesAndEdges(rootNode, depth = 0, stack = 0) {
-  const currentId = rootNode.id;
-  let nodes = [];
-  nodes.push(createXYFlowNode(rootNode, stack));
-
-  let edges = [];
-
-  if (!rootNode.correctRoute && stack == 1) return [nodes, edges];
-
-  for (let i = 0; i < rootNode.children.length; i++) {
-    const next = rootNode.children[i];
-    const nextId = next.id;
-    const isSibling = next.isSiblingOfCorrectRoute;
-
-    const [nextNodes, nextEdges] = createXYFlowNodesAndEdges(
-      next,
-      depth + 1,
-      !rootNode.correctRoute ? stack + 1 : 0
-    );
-
-    nodes = [...nodes, ...nextNodes];
-    edges = [
-      ...edges,
-      ...nextEdges,
-      isSibling || !rootNode.correctRoute
-        ? createXYFlowSiblingEdge(rootNode, next)
-        : createXYFlowEdge(rootNode, next),
-    ];
-  }
-
-  return [nodes, edges];
-}
-
-const getLayoutedElements = (nodes, edges, options) => {
-  const g = new Dagre.graphlib.Graph().setDefaultEdgeLabel(() => ({}));
-  g.setGraph({ rankdir: options.direction });
-
-  edges.forEach((edge) => g.setEdge(edge.source, edge.target));
-  nodes.forEach((node) =>
-    g.setNode(node.id, {
-      ...node,
-      width: 250, height: 250
-      // width: node.measured?.width ?? 0,
-      // height: node.measured?.height ?? 0,
-    })
-  );
-
-  Dagre.layout(g);
-
-  return {
-    nodes: nodes.map((node) => {
-      const position = g.node(node.id);
-      const x = position.x - 250 / 2;
-      const y = position.y - 250 / 2;
-
-      return { ...node, position: { x, y } };
-    }),
-    edges,
-  };
-};
+export const AppContext = createContext(null);
 
 function App() {
-  const { fitView, setViewport, setCenter } = useReactFlow();
+  const { fitView } = useReactFlow();
   const [options, setOptions] = useState({
     size: 3, // 퍼즐 사이즈
     algorithm: "bfs", // 선택된 휴리스틱 알고리즘
@@ -149,6 +59,8 @@ function App() {
   const [rootNode, setRootNode] = useState(null);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  const [history, setHistory] = useState([]);
 
   // idle | solving | solved
   // idle 퍼즐 풀이 대기 중
@@ -160,7 +72,7 @@ function App() {
   const [intermediateResults, setIntermediateResults] = useState({});
 
   // 레이아웃 업데이트가 필요한지 여부
-  const layoutUpdateRequired = useRef(false);
+  const [layoutUpdateRequired, setLayoutUpdateRequired] = useState(false);
 
   // 연결 버튼 클릭 시 호출되는 함수
   const onConnect = useCallback(
@@ -176,53 +88,57 @@ function App() {
         return;
       }
 
-      setTimeout(() => {
-        try {
-          console.log("노드 레이아웃 계산 시작", nodes.length);
-          const layouted = getLayoutedElements(nodes, edges, { direction });
-  
-          setNodes([...layouted.nodes]);
-          setEdges([...layouted.edges]);
+      try {
+        console.log("노드 레이아웃 계산 시작", nodes.length);
+        const layouted = getLayoutedElements(nodes, edges, { direction });
 
-          setTimeout(() => {
-            window.requestAnimationFrame(() => {
-              fitView();
-            });
-          }, 500);
+        setNodes([...layouted.nodes]);
+        setEdges([...layouted.edges]);
 
-          console.log("레이아웃 계산 완료");
-        } catch (error) {
-          console.error("레이아웃 계산 실패", error);
-        }
-      }, 500)
+        setTimeout(() => {
+          window.requestAnimationFrame(() => {
+            fitView();
+          });
+        }, 500);
 
+        console.log("레이아웃 계산 완료");
+      } catch (error) {
+        console.error("레이아웃 계산 실패", error);
+      }
     },
     [nodes, edges, fitView]
   );
 
   // 초기화 버튼 클릭 시 호출되는 함수
-  const onInitialize = useCallback(() => {
-    setOptions((prev) => ({ ...prev, simulationState: "stop" }));
-    let rootNode = new PuzzleState(generateNewPuzzle(options.size), null);
-    while (!isSolvable(rootNode.puzzle, options.size)) {
-      rootNode = new PuzzleState(generateNewPuzzle(options.size), null);
-    }
-    setRootNode(rootNode);
-    setNodes([createXYFlowNode(rootNode)]);
-    setEdges([]);
-    setSolveState("idle");
-    setIntermediateResults({});
-    setTimeout(() => {
-      fitView();
-    }, 100);
-  }, [
-    options,
-    setEdges,
-    setNodes,
-    setSolveState,
-    setIntermediateResults,
-    fitView,
-  ]);
+  const onInitialize = useCallback(
+    (puzzle = null) => {
+      setOptions((prev) => ({ ...prev, simulationState: "stop" }));
+
+      const initialPuzzle = puzzle || generateNewPuzzle(options.size);
+
+      let rootNode = new PuzzleState(initialPuzzle, null);
+      while (!isSolvable(rootNode.puzzle, options.size)) {
+        rootNode = new PuzzleState(generateNewPuzzle(options.size), null);
+      }
+      rootNode.id = "root";
+      setRootNode(rootNode);
+      setNodes([createInitialXYFlowNode(rootNode)]);
+      setEdges([]);
+      setSolveState("idle");
+      setIntermediateResults({});
+      setTimeout(() => {
+        fitView();
+      }, 100);
+    },
+    [
+      options,
+      setEdges,
+      setNodes,
+      setSolveState,
+      setIntermediateResults,
+      fitView,
+    ]
+  );
 
   // 퍼즐 풀기 버튼 클릭 시 호출되는 함수
   const onSolve = useCallback(async () => {
@@ -252,9 +168,11 @@ function App() {
       setNodes(nextNodes);
       setEdges(nextEdges);
       setSolveState("solved");
-      setOptions((prev) => ({ ...prev, simulationState: "stop" }));
+      const newOptions = { ...options, simulationState: "stop" };
+      setOptions(newOptions);
+      addHistory(nextNodes, nextEdges, result, newOptions, rootNode);
 
-      layoutUpdateRequired.current = true;
+      setLayoutUpdateRequired(true);
 
       return result;
     } catch (error) {
@@ -272,6 +190,51 @@ function App() {
       });
     },
     [fitView]
+  );
+
+  const addHistory = useCallback((nodes, edges, intermediateResults, options, rootNode) => {
+    const hist = {
+      nodes: [...nodes],
+      edges: [...edges],
+      result: intermediateResults,
+      options: { ...options },
+      rootNode: rootNode,
+    };
+
+    setHistory((prev) => [...prev, hist]);
+  }, [setHistory]);
+
+  const applyHistory = useCallback(
+    (index) => {
+      const hist = history[index];
+
+      const clonedNodes = hist.nodes.map((node) => ({
+        ...node,
+        data: { ...node.data },
+        position: { ...node.position },
+      }));
+
+      const clonedEdges = hist.edges.map((edge) => ({
+        ...edge,
+        data: { ...edge.data },
+      }));
+
+      setNodes(clonedNodes);
+      setEdges(clonedEdges);
+      setIntermediateResults(hist.result);
+      setOptions(hist.options);
+      setRootNode(hist.rootNode);
+      setLayoutUpdateRequired(true);
+    },
+    [
+      setNodes,
+      setEdges,
+      setIntermediateResults,
+      setOptions,
+      setRootNode,
+      setLayoutUpdateRequired,
+      history,
+    ]
   );
 
   // 초기 노드 생성
@@ -302,53 +265,61 @@ function App() {
   }, [options.simulationState, solveState]);
 
   // 레이아웃 업데이트가 필요한 경우 레이아웃 업데이트
-  useEffect(() => {
-    if (solveState === "solved" && layoutUpdateRequired.current) {
+  useLayoutEffect(() => {
+    if (layoutUpdateRequired) {
       console.log("레이아웃 업데이트 시작");
       onLayout("LR");
-      setSolveState("idle");
-      layoutUpdateRequired.current = false;
+      // 레이아웃 업데이트 후 상태 초기화
+      if (solveState === "solved") setSolveState("idle");
+      setLayoutUpdateRequired(false);
     }
-  }, [solveState, onLayout]);
+  }, [solveState, onLayout, layoutUpdateRequired, setLayoutUpdateRequired]);
 
   return (
-    <div style={{ width: "100vw", height: "100vh" }}>
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onNodeClick={(event, node) => console.log("click", node)}
-        onConnect={onConnect}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        fitView
-        nodesDraggable={false}
-        maxZoom={1.5}
-        minZoom={0.01}
-      >
-        <Background variant="dots" gap={12} size={1} />
-        <Panel position="top-right">
-          <Dashboard
-            solveState={solveState}
-            options={options}
-            setOptions={setOptions}
-            setRootNode={setRootNode}
-            onLayout={onLayout}
-            onInitialize={onInitialize}
-            intermediateResults={intermediateResults}
-          />
-        </Panel>
-        <Panel position="bottom-center">
-          <RouteStepper
-            rootNode={rootNode}
-            solveState={solveState}
-            onFocus={onLayoutSpecificNode}
-          />
-        </Panel>
-        <MiniMap position="top-left" />
-      </ReactFlow>
-    </div>
+    <AppContext.Provider
+      value={{
+        rootNode,
+        options,
+        setOptions,
+        onLayout,
+        onInitialize,
+        onLayoutSpecificNode,
+        solveState,
+        intermediateResults,
+        history,
+        applyHistory,
+      }}
+    >
+      <div style={{ width: "100vw", height: "100vh" }}>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onNodeClick={(event, node) => console.log("click", node)}
+          onConnect={onConnect}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          fitView
+          nodesDraggable={false}
+          maxZoom={1.5}
+          minZoom={0.01}
+        >
+          <Background variant="dots" gap={12} size={1} />
+          <Panel position="top-right">
+            <Dashboard />
+          </Panel>
+          <Panel position="bottom-center">
+            <RouteStepper
+              rootNode={rootNode}
+              solveState={solveState}
+              onFocus={onLayoutSpecificNode}
+            />
+          </Panel>
+          <MiniMap position="top-left" />
+        </ReactFlow>
+      </div>
+    </AppContext.Provider>
   );
 }
 

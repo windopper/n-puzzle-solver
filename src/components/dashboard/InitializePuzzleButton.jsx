@@ -8,5 +8,5 @@ import { Button } from "@mui/material";
  */
 export default function InitializePuzzleButton({ initialize }) {
   // 구현 필요
-  return <Button onClick={initialize}>랜덤 초기화</Button>;
+  return <Button onClick={() => initialize()}>랜덤 초기화</Button>;
 }

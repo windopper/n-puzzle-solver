@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useContext, useEffect } from "react";
 import InitializePuzzleButton from "./InitializePuzzleButton";
 import PuzzleSizeSelect from "./PuzzleSizeSelect";
 import { PuzzleState } from "../../libs/algorithm";
@@ -7,19 +7,25 @@ import PuzzleAlgorithmSelect from "./PuzzleAlgorithmSelect";
 import PuzzleSimulationControl from "./PuzzleSimulationControl";
 import { Box, Button, Card, Divider, Grid2, Paper } from "@mui/material";
 import IntermediateResultIndicator from "./IntermediateResultIndicator";
+import { AppContext } from "../../App";
+import Advanced from "./Advanced";
+import History from "./History";
 
 /**
  * 대시보드 컴포넌트
  */
-export default function Dashboard({
-  solveState,
-  onLayout,
-  options,
-  setOptions,
-  onInitialize,
-  intermediateResults,
-  children,
-}) {
+export default function Dashboard({ children }) {
+  const {
+    solveState,
+    onLayout,
+    options,
+    setOptions,
+    onInitialize,
+    intermediateResults,
+    history,
+    applyHistory,
+  } = useContext(AppContext);
+
   const { size, algorithm, simulationState } = options;
 
   let status;
@@ -55,6 +61,23 @@ export default function Dashboard({
     },
     [setOptions]
   );
+
+  const handleKeyDown = useCallback((e) => {
+    // 스페이스로 시뮬레이션 제어
+    if (e.key === " ") {
+      changeSimulationState(
+        simulationState === "play" ? "pause" : "play"
+      );
+    }
+  }, [changeSimulationState, simulationState]);
+
+  useEffect(() => {
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [handleKeyDown]);
 
   return (
     <Paper
@@ -112,6 +135,8 @@ export default function Dashboard({
         simulationState={simulationState}
         changeSimulationState={changeSimulationState}
       />
+      {/* <Advanced /> */}
+      <History history={history} applyHistory={applyHistory} />
     </Paper>
   );
 }

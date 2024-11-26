@@ -13,6 +13,7 @@ export default function NPuzzle({ node, stack }) {
         style={{
           display: "grid",
           gridTemplateColumns: `repeat(${puzzle[0].length}, 50px)`,
+          gridTemplateRows: `repeat(${puzzle.length}, 50px)`,
           gap: 5,
         }}
       >

@@ -1,5 +1,5 @@
 import { Handle, Position } from "@xyflow/react";
-import NPuzzle from "./NPuzzle";
+import NPuzzle from "../NPuzzle";
 import React from "react";
 
 /**
@@ -16,7 +16,8 @@ function GameBoardNode({ data }) {
           type="target"
           position={Position.Left}
           style={{
-            background: "white",
+            background: "transparent",
+            border: 0,
           }}
         />
       )}
@@ -25,11 +26,10 @@ function GameBoardNode({ data }) {
         type="source"
         position={Position.Right}
         style={{
-          background: "white",
+          background: "transparent",
+          border: 0,
         }}
       />
-      {/* {children.length !== 0 && (
-      )} */}
     </>
   );
 }

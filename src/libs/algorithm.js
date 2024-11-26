@@ -43,12 +43,17 @@ class PuzzleState {
 
   constructor(puzzle, parent, direction = "") {
     this.puzzle = puzzle;
+    this.id = puzzle.flat().join("-");
     this.parent = parent;
     this.direction = direction;
   }
 
   clearChildren() {
     this.children = [];
+  }
+
+  setPuzzle(puzzle) {
+    this.puzzle = puzzle;
   }
 }
 
@@ -83,6 +88,10 @@ const directions = ["up", "down", "left", "right"];
  */
 async function* solve(initialNode, algorithm = "bfs") {
   console.log(`알고리즘: ${algorithm} 으로 퍼즐 해결 시도 중...`);
+
+  if (!isSolvable(initialNode.puzzle, initialNode.puzzle.length)) {
+    return Result.unsolvable();
+  }
 
   let solver;
   switch (algorithm) {
@@ -130,10 +139,6 @@ async function* solveWithBFS(initialNode) {
   const queue = [];
   const visited = new Set();
   let attempts = 0;
-
-  if (!isSolvable(initialNode.puzzle, initialNode.puzzle.length)) {
-    return Result.unsolvable();
-  }
 
   queue.push({ node: initialNode });
   visited.add(JSON.stringify(initialNode.puzzle));
@@ -188,10 +193,6 @@ async function* solveWithDFS(initialNode) {
   const stack = [];
   const visited = new Set();
   let attempts = 0;
-
-  if (!isSolvable(initialNode.puzzle, initialNode.puzzle.length)) {
-    return Result.unsolvable();
-  }
 
   stack.push({ node: initialNode });
   visited.add(JSON.stringify(initialNode.puzzle));
@@ -250,10 +251,6 @@ async function* solveWithAStar(initialNode) {
   const visited = new Set();
   let attempts = 0;
 
-  if (!isSolvable(initialNode.puzzle, initialNode.puzzle.length)) {
-    return Result.unsolvable();
-  }
-
   pq.push({ node: initialNode });
   visited.add(JSON.stringify(initialNode.puzzle));
 
@@ -309,10 +306,6 @@ async function* solveWithGreedy(initialNode) {
   );
   const visited = new Set();
   let attempts = 0;
-
-  if (!isSolvable(initialNode.puzzle, initialNode.puzzle.length)) {
-    return Result.unsolvable();
-  }
 
   pq.push({ node: initialNode });
   visited.add(JSON.stringify(initialNode.puzzle));

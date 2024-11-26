@@ -15,8 +15,9 @@ export default function PuzzleSimulationControl({
       <Button
         onClick={() => changeSimulationState("play")}
         disabled={simulationState === "play"}
+        variant="contained"
       >
-        ▶ Play
+        ▶ Solve
       </Button>
       <Button
         onClick={() => changeSimulationState("pause")}
