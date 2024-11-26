@@ -36,7 +36,6 @@ import {
   getLayoutedElements,
 } from "./libs/flow";
 import GameBoardNodeWithTool from "./components/node/GameBoardNodeWithTool";
-import { Helmet } from "react-helmet";
 
 const nodeTypes = {
   gameBoardNode: GameBoardNodeWithTool,
