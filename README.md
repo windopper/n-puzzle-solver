@@ -1,5 +1,6 @@
 # n-puzzle-solver
 implementing and analyzing A* to efficiently solve the n-puzzle-problem
+<<<<<<< HEAD
 
 ## 개발 환경 세팅
 
@@ -54,3 +55,5 @@ npm run test:algorithm  # 알고리즘 관련 테스트만 실행
 
 
 
+=======
+>>>>>>> b839aa13293e33a9fd528cc2acd4705890d94e16
