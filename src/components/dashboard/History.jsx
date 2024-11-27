@@ -91,9 +91,9 @@ function History({ history, applyHistory }) {
     <AccordionGroup sx={{ width: "100%", paddingX: 1 }}>
       <Accordion title="History">
         <AccordionSummary sx={{ fontWeight: 800 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
             기록
-            <FaHistory />
+            <FaHistory size="12" />
           </div>
         </AccordionSummary>
         <Box

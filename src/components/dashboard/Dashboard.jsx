@@ -5,11 +5,37 @@ import { PuzzleState } from "../../libs/algorithm";
 import { generateNewPuzzle } from "../../libs/puzzle";
 import PuzzleAlgorithmSelect from "./PuzzleAlgorithmSelect";
 import PuzzleSimulationControl from "./PuzzleSimulationControl";
-import { Box, Button, Card, Divider, Grid2, Paper } from "@mui/material";
+import { Box, Card, Divider, Grid2, Paper } from "@mui/material";
 import IntermediateResultIndicator from "./IntermediateResultIndicator";
 import { AppContext } from "../../App";
 import Advanced from "./Advanced";
 import History from "./History";
+import { Button } from "@mui/joy";
+import AlignButton from "./AlignButton";
+
+export const style = {
+  dashboardMenuItem: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    gap: 5,
+    width: "100%",
+    marginTop: 5,
+    padding: "0 10px",
+    boxSizing: "border-box",
+  },
+  dashboardMenuItemTitle: {
+    fontSize: "12px",
+    fontWeight: 200,
+    color: "gray",
+    marginLeft: "5px",
+  },
+  dashboardMenuItemContent: {
+    display: "flex",
+    gap: 5,
+    width: "100%",
+  },
+};
 
 /**
  * 대시보드 컴포넌트
@@ -59,22 +85,23 @@ export default function Dashboard({ children }) {
   const changeSimulationState = useCallback(
     (newSimulationState) => {
       if (newSimulationState === "stop") {
-        onInitialize(rootNode.puzzle)
+        onInitialize(rootNode.puzzle);
       }
 
       setOptions((prev) => ({ ...prev, simulationState: newSimulationState }));
     },
-    [setOptions]
+    [setOptions, rootNode]
   );
 
-  const handleKeyDown = useCallback((e) => {
-    // 스페이스로 시뮬레이션 제어
-    if (e.key === " ") {
-      changeSimulationState(
-        simulationState === "play" ? "pause" : "play"
-      );
-    }
-  }, [changeSimulationState, simulationState]);
+  const handleKeyDown = useCallback(
+    (e) => {
+      // 스페이스로 시뮬레이션 제어
+      if (e.key === " ") {
+        changeSimulationState(simulationState === "play" ? "pause" : "play");
+      }
+    },
+    [changeSimulationState, simulationState]
+  );
 
   useEffect(() => {
     window.addEventListener("keydown", handleKeyDown);
@@ -93,7 +120,7 @@ export default function Dashboard({ children }) {
         justifyContent: "center",
         alignItems: "center",
         paddingBottom: 10,
-        gap: 10,
+        gap: 3,
       }}
     >
       <Grid2
@@ -120,28 +147,43 @@ export default function Dashboard({ children }) {
       </Grid2>
       <Grid2 container spacing={2} paddingX={2}>
         {/* <PuzzleSizeSelect size={size} changeSize={changeSize} /> */}
-        <PuzzleAlgorithmSelect
-          algorithm={algorithm}
-          changeAlgorithm={changeAlgorithm}
+        <IntermediateResultIndicator
+          intermediateResults={intermediateResults}
         />
       </Grid2>
-      <IntermediateResultIndicator intermediateResults={intermediateResults} />
-      <Divider variant="inset" />
-      <Grid2 container spacing={2}>
-        <InitializePuzzleButton initialize={onInitialize} />
-        <Button
-          onClick={() => onLayout("LR")}
-          disabled={solveState === "solving"}
-        >
-          정렬하기
-        </Button>
-      </Grid2>
+      <DashboardDivider />
+      <PuzzleAlgorithmSelect
+        algorithm={algorithm}
+        changeAlgorithm={changeAlgorithm}
+      />
+      <div style={style.dashboardMenuItem}>
+        <div style={style.dashboardMenuItemTitle}>액션</div>
+        <div style={style.dashboardMenuItemContent}>
+          <InitializePuzzleButton initialize={onInitialize} />
+          <AlignButton solveState={solveState} onLayout={onLayout} />
+        </div>
+      </div>
       <PuzzleSimulationControl
         simulationState={simulationState}
         changeSimulationState={changeSimulationState}
       />
+      <DashboardDivider />
       {/* <Advanced /> */}
       <History history={history} applyHistory={applyHistory} />
     </Paper>
+  );
+}
+
+function DashboardDivider() {
+  return (
+    <hr
+      style={{
+        width: "85%",
+        padding: 0,
+        margin: 8,
+        boxSizing: "border-box",
+        border: "0.01px solid rgba(0, 0, 0, 0.1)",
+      }}
+    />
   );
 }
