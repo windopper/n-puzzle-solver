@@ -35,7 +35,7 @@ export default function useLayout(nodes, edges, setNodes, setEdges) {
 
         setTimeout(() => {
           window.requestAnimationFrame(() => {
-            fitView({ duration: 200 });
+            fitView();
           });
         }, 200);
 
