@@ -19,5 +19,10 @@ export default function useMoveTile(node) {
     updateNodeData(node.id, { ...node });
   }
 
-  return { handleMoveTile, handleMoveTileDirection };
+  const handleUpdatePuzzle = (newPuzzle) => {
+    node.setPuzzle(newPuzzle);
+    updateNodeData(node.id, { ...node });
+  }
+
+  return { handleMoveTile, handleMoveTileDirection, handleUpdatePuzzle };
 }

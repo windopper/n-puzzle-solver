@@ -47,6 +47,7 @@ export default function Dashboard({ children }) {
     intermediateResults,
     history,
     applyHistory,
+    changeSimulationState,
   } = useContext(AppContext);
 
   const { size, algorithm, simulationState } = options;
@@ -78,17 +79,6 @@ export default function Dashboard({ children }) {
       setOptions((prev) => ({ ...prev, algorithm: newAlgorithm }));
     },
     [setOptions]
-  );
-
-  const changeSimulationState = useCallback(
-    (newSimulationState) => {
-      if (newSimulationState === "stop") {
-        onInitialize(rootNode.puzzle);
-      }
-
-      setOptions((prev) => ({ ...prev, simulationState: newSimulationState }));
-    },
-    [setOptions, rootNode]
   );
 
   const handleKeyDown = useCallback(

@@ -1,7 +1,6 @@
 import React, {
   createContext,
   useCallback,
-  useEffect,
   useLayoutEffect,
   useState,
 } from "react";
@@ -114,6 +113,9 @@ function App() {
   const onSolve = useCallback(async () => {
     setSolveState("solving");
     try {
+      // 만약 이미 해결된 rootNode를 가지고 있다면, 다시 초기화
+      rootNode.clearChildren();
+
       const solver = solve(rootNode, options.algorithm);
       let result;
 
@@ -203,26 +205,24 @@ function App() {
     ]
   );
 
-  // 시뮬레이션 상태 변경에 따른 처리
-  useEffect(() => {
-    const handleAsync = async () => {
-      if (options.simulationState === "play") {
+  const changeSimulationState = useCallback(
+    (newSimulationState) => {
+      if (newSimulationState === "stop") {
+        SolveState.isPaused = false;
+        SolveState.isStopped = true;
+        onInitialize(rootNode.puzzle);
+      } else if (newSimulationState === "play") {
         SolveState.isPaused = false;
         SolveState.isStopped = false;
-        if (solveState === "idle") {
-          await onSolve();
-        }
-      } else if (options.simulationState === "pause") {
+        onSolve();
+      } else if (newSimulationState === "pause") {
         SolveState.isPaused = true;
         SolveState.isStopped = false;
-      } else if (options.simulationState === "stop") {
-        SolveState.isStopped = true;
-        SolveState.isPaused = false;
       }
-    };
-
-    handleAsync();
-  }, [options.simulationState, solveState]);
+      setOptions((prev) => ({ ...prev, simulationState: newSimulationState }));
+    },
+    [onInitialize, onSolve, setOptions, rootNode]
+  );
 
   // 초기 노드 생성
   useLayoutEffect(() => {
@@ -237,12 +237,14 @@ function App() {
         options,
         setOptions,
         onLayout,
+        onSolve,
         onInitialize,
         onLayoutSpecificNode,
         solveState,
         intermediateResults,
         history,
         applyHistory,
+        changeSimulationState,
       }}
     >
       <div style={{ width: "100vw", height: "100vh" }}>
