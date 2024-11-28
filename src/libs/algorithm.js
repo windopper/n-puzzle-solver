@@ -2,9 +2,11 @@ import { move, isGoal } from "./puzzle";
 import {
   createGoalMapping,
   createGoalState,
+  endTimer,
   isEqualPuzzle,
   manhattanDistance,
   priorityEnqueue,
+  startTimer,
 } from "./util";
 
 export const SolveState = {
@@ -80,10 +82,12 @@ class Result {
   attempts;
   least_attempts;
   last_node;
+  visited;
 
-  constructor(total_attempts, least_attempts) {
+  constructor(total_attempts, least_attempts, visited) {
     this.attempts = total_attempts;
     this.least_attempts = least_attempts;
+    this.visited = visited;
   }
 
   static unsolvable() {
@@ -121,6 +125,8 @@ async function* solve(initialNode, algorithm = "bfs") {
     return Result.unsolvable();
   }
 
+  const start = startTimer();
+
   let solver;
   switch (algorithm) {
     case "bfs":
@@ -139,7 +145,9 @@ async function* solve(initialNode, algorithm = "bfs") {
   while (true) {
     const { value, done } = await solver.next();
     if (done) {
-      return value;
+      const miliSecond = endTimer(start);
+
+      return { ...value, time: miliSecond };
     }
 
     if (value === "paused") {
@@ -168,12 +176,10 @@ async function* solveWithBFS(initialNode) {
     attempts++;
 
     if (isGoal(node.puzzle)) {
-      const result = new Result(attempts, node.depth);
+      const result = new Result(attempts, node.depth, Object.keys(closedSet).length);
       result.last_node = node;
       return result;
     }
-
-    closedSet[JSON.stringify(node.puzzle)] = 1;
 
     for (const direction of directions) {
       const newPuzzle = move(node.puzzle, direction);
@@ -183,6 +189,7 @@ async function* solveWithBFS(initialNode) {
         continue;
       }
 
+      closedSet[JSON.stringify(newPuzzle)] = 1;
       const childNode = new PuzzleState(newPuzzle, node, direction);
       childNode.depth = node.depth + 1;
       node.children.push(childNode);
@@ -231,7 +238,7 @@ async function* solveWithAStarClosedSet(initialNode) {
     attempts++;
 
     if (isGoal(node.puzzle)) {
-      const result = new Result(attempts, node.depth);
+      const result = new Result(attempts, node.depth, Object.keys(closedSet).length);
       result.last_node = node;
       return result;
     }
@@ -275,7 +282,7 @@ async function* solveWithAStarClosedSet(initialNode) {
         attempts,
         currentDepth: node.depth,
         queueSize: openList.length,
-        // visited: closedSet
+        visited: Object.keys(closedSet).length,
       };
     }
 
@@ -312,12 +319,10 @@ async function* solveWithGreedy(initialNode) {
     attempts++;
 
     if (isGoal(node.puzzle)) {
-      const result = new Result(attempts, node.depth);
+      const result = new Result(attempts, node.depth, Object.keys(closedSet).length);
       result.last_node = node;
       return result;
     }
-
-    closedSet[JSON.stringify(node.puzzle)] = 1;
 
     for (const direction of directions) {
       const newPuzzle = move(node.puzzle, direction);
@@ -326,6 +331,8 @@ async function* solveWithGreedy(initialNode) {
       if (closedSet[puzzleKey]) {
         continue;
       }
+
+      closedSet[puzzleKey] = 1; 
 
       const childNode = new PuzzleState(newPuzzle, node, direction);
       childNode.depth = node.depth + 1;

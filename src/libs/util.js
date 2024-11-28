@@ -128,3 +128,11 @@ export const isEqualPuzzle = (puzzle1, puzzle2) => {
     row.every((tile, j) => tile === puzzle2[i][j])
   );
 };
+
+export const startTimer = () => {
+  return performance.now();
+}
+
+export const endTimer = (start) => {
+  return performance.now() - start;
+}
