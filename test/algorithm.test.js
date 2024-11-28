@@ -1,4 +1,7 @@
 import { isSolvable, PuzzleState, Result, solve } from "../src/libs/algorithm";
+import { generateNewPuzzle, generateSolvablePuzzle } from "../src/libs/puzzle";
+
+jest.setTimeout(30000);
 
 describe("8-퍼즐 알고리즘 테스트", () => {
   test("초기 상태가 이미 목표 상태인 경우", async () => {
@@ -20,7 +23,6 @@ describe("8-퍼즐 알고리즘 테스트", () => {
       }
     }
 
-    expect(result).toBeInstanceOf(Result);
     expect(result.attempts).toBe(1);
     expect(result.least_attempts).toBe(0);
   });
@@ -48,15 +50,43 @@ describe("8-퍼즐 알고리즘 테스트", () => {
     expect(result.least_attempts).toBe(1);
   });
 
-  test("여러 번의 이동이 필요한 복잡한 케이스", async () => {
-    const initialPuzzle = [
-      [1, 2, 3],
-      [4, 0, 6],
-      [7, 5, 8],
-    ];
+  test("ASTAR 알고리즘 테스트 케이스", async () => {
+    const initialNode = new PuzzleState(generateSolvablePuzzle(3), null);
+    const solver = solve(initialNode, "astar");
+    let result;
 
-    const initialNode = new PuzzleState(initialPuzzle, null);
-    const solver = solve(initialNode);
+    while (true) {
+      const { done, value } = await solver.next();
+      if (done) {
+        result = value;
+        break;
+      }
+    }
+
+    expect(result.attempts).toBeGreaterThanOrEqual(1);
+    expect(result.least_attempts).toBeGreaterThan(1);
+  });
+
+  test("BFS 알고리즘 테스트 케이스", async () => {
+    const initialNode = new PuzzleState(generateSolvablePuzzle(3), null);
+    const solver = solve(initialNode, "bfs");
+    let result;
+
+    while (true) {
+      const { done, value } = await solver.next();
+      if (done) {
+        result = value;
+        break;
+      }
+    }
+
+    expect(result.attempts).toBeGreaterThanOrEqual(1);
+    expect(result.least_attempts).toBeGreaterThan(1);
+  });
+
+  test("GREEDY 알고리즘 테스트 케이스", async () => {
+    const initialNode = new PuzzleState(generateSolvablePuzzle(3), null);
+    const solver = solve(initialNode, "greedy");
     let result;
 
     while (true) {

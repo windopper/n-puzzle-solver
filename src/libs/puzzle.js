@@ -1,7 +1,15 @@
-import { PuzzleState } from "./algorithm";
+import { isSolvable, PuzzleState } from "./algorithm";
+
+function generateSolvablePuzzle(n) {
+  let puzzle = generateNewPuzzle(n);
+  while (!isSolvable(puzzle, n)) {
+    puzzle = generateNewPuzzle(n);
+  }
+  return puzzle;
+}
 
 /**
- * 해결가능한 랜덤 퍼즐을 생성한다.
+ * 랜덤 퍼즐을 생성한다.
  * ex) generateNewPuzzle(3) => [[1, 2, 3], [4, 5, 6], [7, 8, 0]]
  *
  * @param {number} n
@@ -115,4 +123,4 @@ function isGoal(puzzle) {
   return true;
 }
 
-export { generateNewPuzzle, move, isGoal };
+export { generateSolvablePuzzle, generateNewPuzzle, move, isGoal };
