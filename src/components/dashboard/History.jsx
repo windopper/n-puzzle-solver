@@ -15,7 +15,7 @@ function History({ history, applyHistory }) {
     .map((hist, index) => {
       const { nodes, edges, result, options, rootNode } = hist;
       const { size, algorithm, simulationState } = options;
-      const { attempts, least_attempts } = result;
+      const { attempts, least_attempts, time } = result;
 
       return (
         <AccordionDetails
@@ -58,7 +58,7 @@ function History({ history, applyHistory }) {
                 {algorithm}
               </Chip>
               <Chip size="sm" variant="soft" color="neutral" label={size}>
-                {`${size}x${size} Size`}
+                {`${time ? Math.round(time * 100) / 100 : 0}ms`}
               </Chip>
               <Box
                 sx={{
