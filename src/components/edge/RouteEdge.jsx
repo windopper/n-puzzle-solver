@@ -6,6 +6,25 @@ import {
   FaArrowUp,
 } from "react-icons/fa";
 
+const styles ={
+  edgeLabel: (labelX, labelY) => ({
+    position: "absolute",
+    background: "linear-gradient(to right, #006FEE, #4C9EFF)",
+    color: "white",
+    padding: "4px 6px",
+    aspectRatio: "1",
+    borderRadius: "100px",
+    fontSize: "0.875rem",
+    fontWeight: "500",
+    border: "1px solid rgba(255, 255, 255, 0.2)",
+    cursor: "default",
+    pointerEvents: "all",
+    transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
+    transition: "all 0.2s ease",
+    userSelect: "none",
+  })
+}
+
 export default function RouteEdge({
   id,
   sourceX,
@@ -32,22 +51,7 @@ export default function RouteEdge({
       <BaseEdge id={id} path={edgePath} style={style} />
       <EdgeLabelRenderer>
         <div
-          style={{
-            position: "absolute",
-            background: "linear-gradient(to right, #006FEE, #4C9EFF)",
-            color: "white",
-            padding: "4px 6px",
-            aspectRatio: "1",
-            borderRadius: "100px",
-            fontSize: "0.875rem",
-            fontWeight: "500",
-            border: "1px solid rgba(255, 255, 255, 0.2)",
-            cursor: "default",
-            pointerEvents: "all",
-            transform: `translate(-50%, -50%) translate(${labelX}px,${labelY}px)`,
-            transition: "all 0.2s ease",
-            userSelect: "none",
-          }}
+          style={styles.edgeLabel(labelX, labelY)}
         >
           {route === "up" && <FaArrowUp size={20} />}
           {route === "down" && <FaArrowDown size={20} />}

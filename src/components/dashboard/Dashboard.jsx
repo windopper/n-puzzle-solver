@@ -1,17 +1,13 @@
 import { useCallback, useContext, useEffect } from "react";
 import InitializePuzzleButton from "./InitializePuzzleButton";
-import PuzzleSizeSelect from "./PuzzleSizeSelect";
-import { PuzzleState } from "../../libs/algorithm";
-import { generateNewPuzzle } from "../../libs/puzzle";
 import PuzzleAlgorithmSelect from "./PuzzleAlgorithmSelect";
 import PuzzleSimulationControl from "./PuzzleSimulationControl";
-import { Box, Card, Divider, Grid2, Paper } from "@mui/material";
+import { Box, Grid2, Paper } from "@mui/material";
 import IntermediateResultIndicator from "./IntermediateResultIndicator";
 import { AppContext } from "../../App";
-import Advanced from "./Advanced";
 import History from "./History";
-import { Button } from "@mui/joy";
 import AlignButton from "./AlignButton";
+import useSolvable from "../../hooks/useSolvable";
 
 export const style = {
   dashboardMenuItem: {
@@ -54,6 +50,8 @@ export default function Dashboard({ children }) {
   } = useContext(AppContext);
 
   const { size, algorithm, simulationState } = options;
+
+  const solvable = useSolvable(solveState, rootNode);
 
   let status;
   let statusBackgroundColor = "white";
@@ -166,6 +164,7 @@ export default function Dashboard({ children }) {
       <PuzzleSimulationControl
         simulationState={simulationState}
         changeSimulationState={changeSimulationState}
+        canSolve={solvable}
       />
       <DashboardDivider />
       {/* <Advanced /> */}

@@ -1,10 +1,8 @@
-import PriorityQueue from "./PriorityQueue";
 import { move, isGoal } from "./puzzle";
 import {
   createGoalMapping,
   createGoalState,
   isEqualPuzzle,
-  linearConflict,
   manhattanDistance,
   priorityEnqueue,
 } from "./util";
@@ -49,24 +47,10 @@ class PuzzleState {
   isSiblingOfCorrectRoute = false;
 
   constructor(puzzle, parent, direction = "") {
-    this.puzzle = puzzle;
+    this.setPuzzle(puzzle);
     this.id = puzzle.flat().join("-");
     this.parent = parent;
     this.direction = direction;
-
-    // find blank position
-    const n = puzzle.length;
-    this.blankX = 0;
-    this.blankY = 0;
-
-    for (let i = 0; i < n; i++) {
-      for (let j = 0; j < n; j++) {
-        if (puzzle[i][j] === 0) {
-          this.blankX = j;
-          this.blankY = i;
-        }
-      }
-    }
   }
 
   clearChildren() {
@@ -75,6 +59,15 @@ class PuzzleState {
 
   setPuzzle(puzzle) {
     this.puzzle = puzzle;
+    const n = puzzle.length;
+    for (let i = 0; i < n; i++) {
+      for (let j = 0; j < n; j++) {
+        if (puzzle[i][j] === 0) {
+          this.blankX = j;
+          this.blankY = i;
+        }
+      }
+    }
   }
 }
 
@@ -133,17 +126,11 @@ async function* solve(initialNode, algorithm = "bfs") {
     case "bfs":
       solver = solveWithBFS(initialNode);
       break;
-    case "dfs":
-      solver = solveWithDFS(initialNode);
-      break;
     case "astar":
       solver = solveWithAStarClosedSet(initialNode);
       break;
     case "greedy":
       solver = solveWithGreedy(initialNode);
-      break;
-    case "random":
-      solver = solveWithRandomWalk(initialNode);
       break;
     default:
       throw new Error("Unsupported algorithm");
@@ -160,7 +147,6 @@ async function* solve(initialNode, algorithm = "bfs") {
         await new Promise((resolve) => setTimeout(resolve, 100));
       }
     } else {
-      // promise per 100 attempts
       if (value.attempts % 100 === 0) {
         await new Promise((resolve) => setTimeout(resolve, 0));
       }
@@ -210,59 +196,6 @@ async function* solveWithBFS(initialNode) {
         currentDepth: node.depth,
         queueSize: openSet.length,
         visited: Object.keys(closedSet).length,
-      };
-    }
-
-    if (SolveState.isPaused) {
-      yield "paused";
-    }
-
-    // 사용자가 중지를 요청한 경우
-    if (SolveState.isStopped) {
-      throw new Error("사용자가 중지를 요청했습니다.");
-    }
-  }
-
-  return Result.unsolvable();
-}
-
-async function* solveWithDFS(initialNode) {
-  const stack = [];
-  const visited = new Set();
-  let attempts = 0;
-
-  stack.push({ node: initialNode });
-  visited.add(JSON.stringify(initialNode.puzzle));
-
-  while (stack.length > 0) {
-    const { node } = stack.pop();
-    attempts++;
-
-    if (isGoal(node.puzzle)) {
-      const result = new Result(attempts, node.depth);
-      result.last_node = node;
-      return result;
-    }
-
-    for (const direction of directions) {
-      const newPuzzle = move(node.puzzle, direction);
-      const puzzleKey = JSON.stringify(newPuzzle);
-
-      if (!visited.has(puzzleKey)) {
-        visited.add(puzzleKey);
-        const childNode = new PuzzleState(newPuzzle, node, direction);
-        childNode.depth = node.depth + 1;
-        node.children.push(childNode);
-        stack.push({ node: childNode });
-      }
-    }
-
-    if (attempts % 100 === 0) {
-      yield {
-        attempts,
-        currentDepth: node.depth,
-        queueSize: stack.length,
-        visited: visited.size,
       };
     }
 
@@ -359,104 +292,6 @@ async function* solveWithAStarClosedSet(initialNode) {
   return Result.unsolvable();
 }
 
-async function* solveWithAStar(initialNode) {
-  const goalState = createGoalState(initialNode.puzzle.length);
-  const goalMapping = createGoalMapping(goalState);
-
-  const h = (node) => {
-    return node.depth + manhattanDistance(node.puzzle, goalMapping);
-  };
-
-  const openList = [];
-  // const closedSet = {};
-  let attempts = 0;
-
-  priorityEnqueue(openList, initialNode, h(initialNode));
-
-  while (openList.length > 0) {
-    const { node, cost } = openList.shift();
-    attempts++;
-
-    if (isGoal(node.puzzle)) {
-      const result = new Result(attempts, node.depth);
-      result.last_node = node;
-      return result;
-    }
-
-    // closedSet[JSON.stringify(node.puzzle)] = 1;
-
-    for (const direction of directions) {
-      const newPuzzle = move(node, direction);
-      const puzzleKey = JSON.stringify(newPuzzle);
-
-      // if (closedSet[puzzleKey]) {
-      //   continue;
-      // }
-
-      if (node.parent && direction === getOppositeDirection(node.direction)) {
-        continue;
-      }
-
-      const openNeighborIndex = openList.findIndex((item) =>
-        isEqualPuzzle(item.node.puzzle, newPuzzle)
-      );
-
-      if (openNeighborIndex !== -1) {
-        const openNeighbor = openList[openNeighborIndex];
-        if (openNeighbor.node.depth > node.depth + 1) {
-          openList.splice(openNeighborIndex, 1);
-
-          // 기존 부모-자식 관계 정리
-          if (openNeighbor.node.parent) {
-            openNeighbor.node.parent.children =
-              openNeighbor.node.parent.children.filter(
-                (child) => child.id !== openNeighbor.node.id
-              );
-          }
-
-          // 새로운 부모-자식 관계 설정
-          openNeighbor.node.parent = node;
-          openNeighbor.node.direction = direction;
-          openNeighbor.node.depth = node.depth + 1;
-          node.children.push(openNeighbor.node);
-          priorityEnqueue(openList, openNeighbor.node, h(openNeighbor.node));
-        }
-      } else {
-        const childNode = new PuzzleState(newPuzzle, node, direction);
-        const checkDuplicate = openList.find(
-          (item) => item.node.id === childNode.id
-        );
-
-        if (checkDuplicate) continue;
-
-        childNode.depth = node.depth + 1;
-        node.children.push(childNode);
-        priorityEnqueue(openList, childNode, h(childNode));
-      }
-    }
-
-    if (attempts % 100 === 0) {
-      yield {
-        attempts,
-        currentDepth: node.depth,
-        queueSize: openList.length,
-        // visited: closedSet
-      };
-    }
-
-    if (SolveState.isPaused) {
-      yield "paused";
-    }
-
-    // 사용자가 중지를 요청한 경우
-    if (SolveState.isStopped) {
-      throw new Error("사용자가 중지를 요청했습니다.");
-    }
-  }
-
-  return Result.unsolvable();
-}
-
 async function* solveWithGreedy(initialNode) {
   const goalState = createGoalState(initialNode.puzzle.length);
   const goalMapping = createGoalMapping(goalState);
@@ -504,61 +339,6 @@ async function* solveWithGreedy(initialNode) {
         currentDepth: node.depth,
         queueSize: openList.length,
         visited: Object.keys(closedSet).length,
-      };
-    }
-
-    if (SolveState.isPaused) {
-      yield "paused";
-    }
-
-    // 사용자가 중지를 요청한 경우
-    if (SolveState.isStopped) {
-      throw new Error("사용자가 중지를 요청했습니다.");
-    }
-  }
-
-  return Result.unsolvable();
-}
-
-async function* solveWithRandomWalk(initialNode) {
-  let currentNode = initialNode;
-  let depth = 0;
-  let attempts = 0;
-  const maxAttempts = 200000; // 무한 루프 방지를 위한 최대 시도 횟수
-
-  if (!isSolvable(initialNode.puzzle, initialNode.puzzle.length)) {
-    return Result.unsolvable();
-  }
-
-  while (attempts < maxAttempts) {
-    attempts++;
-
-    if (isGoal(currentNode.puzzle)) {
-      const result = new Result(attempts, depth);
-      result.last_node = currentNode;
-      return result;
-    }
-
-    // 랜덤한 방향 선택
-    const randomDirection =
-      directions[Math.floor(Math.random() * directions.length)];
-    const newPuzzle = move(currentNode.puzzle, randomDirection);
-
-    if (newPuzzle) {
-      const childNode = new PuzzleState(
-        newPuzzle,
-        currentNode,
-        randomDirection
-      );
-      currentNode.children.push(childNode);
-      currentNode = childNode;
-      depth++;
-    }
-
-    if (attempts % 100 === 0) {
-      yield {
-        attempts,
-        currentDepth: depth,
       };
     }
 

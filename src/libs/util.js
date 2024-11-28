@@ -114,15 +114,12 @@ export function linearConflict(puzzle) {
 }
 
 export const priorityEnqueue = (openList, node, cost) => {
-  // Make open list a priority queue by inserting elements in order
   for (let i = 0; i < openList.length; i++) {
     if (openList[i].cost > cost) {
       openList.splice(i, 0, { node, cost });
       return;
     }
   }
-
-  // Puzzle cost is greater than all others, add to end of queue
   openList.push({ node, cost });
 };
 

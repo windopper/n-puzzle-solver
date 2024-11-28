@@ -9,7 +9,6 @@ import {
   ReactFlow,
   useNodesState,
   useEdgesState,
-  addEdge,
   Background,
   useReactFlow,
   ReactFlowProvider,
@@ -33,9 +32,10 @@ import GameBoardInitialNode from "./components/node/GameBoardInitialNode";
 import {
   createInitialXYFlowNode,
   createXYFlowNodesAndEdges,
-  getLayoutedElements,
 } from "./libs/flow";
 import GameBoardNodeWithTool from "./components/node/GameBoardNodeWithTool";
+import WarningUnsolvablePuzzle from "./components/WarningUnsolvablePuzzle";
+import useLayout from "./hooks/useLayout";
 
 const nodeTypes = {
   gameBoardNode: GameBoardNodeWithTool,
@@ -72,42 +72,12 @@ function App() {
   const [intermediateResults, setIntermediateResults] = useState({});
 
   // 레이아웃 업데이트가 필요한지 여부
-  const [layoutUpdateRequired, setLayoutUpdateRequired] = useState(false);
-
-  // 연결 버튼 클릭 시 호출되는 함수
-  const onConnect = useCallback(
-    (params) => setEdges((eds) => addEdge(params, eds)),
-    [setEdges]
-  );
-
-  // 정렬 버튼 클릭 시 호출되는 함수
-  const onLayout = useCallback(
-    (direction) => {
-      if (!nodes.length) {
-        console.log("레이아웃 계산을 위한 노드가 없습니다.");
-        return;
-      }
-
-      try {
-        console.log("노드 레이아웃 계산 시작", nodes.length);
-        const layouted = getLayoutedElements(nodes, edges, { direction });
-
-        setNodes([...layouted.nodes]);
-        setEdges([...layouted.edges]);
-
-        setTimeout(() => {
-          window.requestAnimationFrame(() => {
-            fitView();
-          });
-        }, 500);
-
-        console.log("레이아웃 계산 완료");
-      } catch (error) {
-        console.error("레이아웃 계산 실패", error);
-      }
-    },
-    [nodes, edges, fitView]
-  );
+  const {
+    layoutUpdateRequired,
+    onLayout,
+    onLayoutSpecificNode,
+    setLayoutUpdateRequired,
+  } = useLayout(nodes, edges, setNodes, setEdges );
 
   // 초기화 버튼 클릭 시 호출되는 함수
   const onInitialize = useCallback(
@@ -128,7 +98,7 @@ function App() {
       setIntermediateResults({});
       setTimeout(() => {
         fitView();
-      }, 100);
+      }, 200);
     },
     [
       options,
@@ -172,7 +142,6 @@ function App() {
       const newOptions = { ...options, simulationState: "stop" };
       setOptions(newOptions);
       addHistory(nextNodes, nextEdges, result, newOptions, rootNode, "solved");
-
       setLayoutUpdateRequired(true);
 
       return result;
@@ -182,16 +151,6 @@ function App() {
       setOptions((prev) => ({ ...prev, simulationState: "stop" }));
     }
   }, [rootNode, setEdges, setNodes, options]);
-
-  // 특정 노드에 포커스를 맞추는 함수
-  const onLayoutSpecificNode = useCallback(
-    (nodes) => {
-      window.requestAnimationFrame(() => {
-        fitView({ nodes, minZoom: 0.1, duration: 400, padding: 0.1 });
-      });
-    },
-    [fitView]
-  );
 
   const addHistory = useCallback(
     (nodes, edges, intermediateResults, options, rootNode, solveState) => {
@@ -244,11 +203,6 @@ function App() {
     ]
   );
 
-  // 초기 노드 생성
-  useEffect(() => {
-    onInitialize();
-  }, []);
-
   // 시뮬레이션 상태 변경에 따른 처리
   useEffect(() => {
     const handleAsync = async () => {
@@ -256,7 +210,7 @@ function App() {
         SolveState.isPaused = false;
         SolveState.isStopped = false;
         if (solveState === "idle") {
-          const result = await onSolve();
+          await onSolve();
         }
       } else if (options.simulationState === "pause") {
         SolveState.isPaused = true;
@@ -270,21 +224,16 @@ function App() {
     handleAsync();
   }, [options.simulationState, solveState]);
 
-  // 레이아웃 업데이트가 필요한 경우 레이아웃 업데이트
+  // 초기 노드 생성
   useLayoutEffect(() => {
-    if (layoutUpdateRequired) {
-      console.log("레이아웃 업데이트 시작");
-      onLayout("LR");
-      // 레이아웃 업데이트 후 상태 초기화
-      // if (solveState === "solved") setSolveState("idle");
-      setLayoutUpdateRequired(false);
-    }
-  }, [solveState, onLayout, layoutUpdateRequired, setLayoutUpdateRequired]);
+    onInitialize();
+  }, []);
 
   return (
     <AppContext.Provider
       value={{
         rootNode,
+        setRootNode,
         options,
         setOptions,
         onLayout,
@@ -303,15 +252,21 @@ function App() {
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           onNodeClick={(event, node) => console.log("click", node)}
-          onConnect={onConnect}
           nodeTypes={nodeTypes}
           edgeTypes={edgeTypes}
           fitView
           nodesDraggable={false}
+          onlyRenderVisibleElements
+          // solveState가 idle 상태가 아닐 때는 드래그 금지
+          panOnDrag={solveState !== "idle"}
+          zoomOnScroll={solveState !== "idle"}
           maxZoom={1.5}
           minZoom={0.01}
         >
           <Background variant="dots" gap={12} size={1} />
+          <Panel position="top-center">
+            <WarningUnsolvablePuzzle />
+          </Panel>
           <Panel position="top-right">
             <Dashboard />
           </Panel>

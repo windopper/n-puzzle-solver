@@ -9,32 +9,26 @@ import GameBoardNode from "./GameBoardNode";
 import { useReactFlow } from "@xyflow/react";
 import { useContext, useEffect } from "react";
 import { AppContext } from "../../App";
+import useMoveTile from "../../hooks/useMoveTile";
 
 export default function GameBoardInitialNode(param) {
   const { rootNode } = useContext(AppContext);
-  const { updateNodeData, updateNode } = useReactFlow();
   const { data } = param;
   const { node } = data;
-
-  const handleOnClick = (direction) => {
-    const movedPuzzle = move(node.puzzle, direction);
-    node.setPuzzle(movedPuzzle);
-    updateNodeData(node.id, { ...node });
-  };
+  const { handleMoveTileDirection } = useMoveTile(node);
 
   const canControl = rootNode.children.length === 0;
 
   const handleKeyDown = (e) => {
     if (!canControl) return;
-    if (e.key === "ArrowUp") handleOnClick("up");
-    if (e.key === "ArrowDown") handleOnClick("down");
-    if (e.key === "ArrowLeft") handleOnClick("left");
-    if (e.key === "ArrowRight") handleOnClick("right");
+    if (e.key === "ArrowUp") handleMoveTileDirection("up");
+    if (e.key === "ArrowDown") handleMoveTileDirection("down");
+    if (e.key === "ArrowLeft") handleMoveTileDirection("left");
+    if (e.key === "ArrowRight") handleMoveTileDirection("right");
   };
 
   useEffect(() => {
     if (!canControl) return;
-
     window.addEventListener("keydown", handleKeyDown);
 
     return () => {
@@ -46,18 +40,18 @@ export default function GameBoardInitialNode(param) {
     <>
       <div style={{ position: "relative", margin: 5 }}>
         {canControl && (
-          <Arrow direction="up" onClick={() => handleOnClick("up")} />
+          <Arrow direction="up" onClick={() => handleMoveTileDirection("up")} />
         )}
         {canControl && (
-          <Arrow direction="down" onClick={() => handleOnClick("down")} />
+          <Arrow direction="down" onClick={() => handleMoveTileDirection("down")} />
         )}
         {canControl && (
-          <Arrow direction="left" onClick={() => handleOnClick("left")} />
+          <Arrow direction="left" onClick={() => handleMoveTileDirection("left")} />
         )}
         {canControl && (
-          <Arrow direction="right" onClick={() => handleOnClick("right")} />
+          <Arrow direction="right" onClick={() => handleMoveTileDirection("right")} />
         )}
-        <GameBoardNode {...param} />
+        <GameBoardNode canMoveTile {...param} />
       </div>
     </>
   );

@@ -1,4 +1,4 @@
-import { Button, Grid2 } from "@mui/material";
+import { Button } from "@mui/material";
 import { style } from "./Dashboard";
 
 /**
@@ -10,18 +10,20 @@ import { style } from "./Dashboard";
 export default function PuzzleSimulationControl({
   simulationState,
   changeSimulationState,
+  canSolve,
 }) {
   return (
     <div style={style.dashboardMenuItem}>
       <div style={style.dashboardMenuItemTitle}>시뮬레이션 제어</div>
       <div style={style.dashboardMenuItemContent}>
-        <Button
-          onClick={() => changeSimulationState("play")}
-          disabled={simulationState === "play"}
-          variant="contained"
-        >
-          ▶ Solve
-        </Button>
+          <Button
+            onClick={() => changeSimulationState("play")}
+            disabled={simulationState === "play" || !canSolve}
+            variant="contained"
+            color="primary"
+          >
+            ▶ Solve
+          </Button>
         <Button
           onClick={() => changeSimulationState("pause")}
           disabled={simulationState === "pause"}
