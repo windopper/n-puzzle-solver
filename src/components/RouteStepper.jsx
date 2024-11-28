@@ -16,7 +16,7 @@ const styles = {
     alignItems: "center",
     boxShadow: "0 1px 2px rgba(0, 0, 0, 0.2)",
     backgroundColor: "#F9FAFB",
-    minWidth: "70vw",
+    minWidth: "400px",
     maxWidth: "70vw",
     overflow: "hidden",
     margin: "auto",
