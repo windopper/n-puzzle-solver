@@ -1,21 +1,23 @@
-import { move } from "../../libs/puzzle";
 import {
   FaArrowDown,
   FaArrowLeft,
   FaArrowRight,
   FaArrowUp,
+  FaCopy,
+  FaPaste,
 } from "react-icons/fa";
 import GameBoardNode from "./GameBoardNode";
-import { useReactFlow } from "@xyflow/react";
 import { useContext, useEffect } from "react";
 import { AppContext } from "../../App";
 import useMoveTile from "../../hooks/useMoveTile";
+import usePuzzleCopyPaste from "../../hooks/usePuzzleCopyPaste";
+import Toolbar from "../Toolbar";
 
 export default function GameBoardInitialNode(param) {
   const { rootNode } = useContext(AppContext);
   const { data } = param;
   const { node } = data;
-  const { handleMoveTileDirection } = useMoveTile(node);
+  const { handleMoveTileDirection, handleUpdatePuzzle } = useMoveTile(node);
 
   const canControl = rootNode.children.length === 0;
 
@@ -38,18 +40,28 @@ export default function GameBoardInitialNode(param) {
 
   return (
     <>
+      <Toolbar node={node} />
       <div style={{ position: "relative", margin: 5 }}>
         {canControl && (
           <Arrow direction="up" onClick={() => handleMoveTileDirection("up")} />
         )}
         {canControl && (
-          <Arrow direction="down" onClick={() => handleMoveTileDirection("down")} />
+          <Arrow
+            direction="down"
+            onClick={() => handleMoveTileDirection("down")}
+          />
         )}
         {canControl && (
-          <Arrow direction="left" onClick={() => handleMoveTileDirection("left")} />
+          <Arrow
+            direction="left"
+            onClick={() => handleMoveTileDirection("left")}
+          />
         )}
         {canControl && (
-          <Arrow direction="right" onClick={() => handleMoveTileDirection("right")} />
+          <Arrow
+            direction="right"
+            onClick={() => handleMoveTileDirection("right")}
+          />
         )}
         <GameBoardNode canMoveTile {...param} />
       </div>
