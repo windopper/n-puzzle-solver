@@ -4,6 +4,7 @@ import GameBoardNode from "./GameBoardNode";
 import { useContext } from "react";
 import { AppContext } from "../../App";
 import { AnimatePresence, motion } from "motion/react";
+import Toolbar from "../Toolbar";
 
 const style = {
   button: {
@@ -20,13 +21,15 @@ const style = {
 };
 
 export default function GameBoardNodeWithTool(params) {
-  const { data } = params;
+  const { data, selected } = params;
   const { node } = data;
   const { onInitialize } = useContext(AppContext);
 
   return (
     <>
-      <NodeToolbar>
+      <Toolbar node={node} disabled={!selected} disabledPaste />
+      <NodeToolbar></NodeToolbar>
+      {/* <NodeToolbar>
         <motion.button
           style={style.button}
           initial={{ opacity: 0 }}
@@ -35,7 +38,7 @@ export default function GameBoardNodeWithTool(params) {
         >
           초기 지점 설정
         </motion.button>
-      </NodeToolbar>
+      </NodeToolbar> */}
       <GameBoardNode {...params} />
     </>
   );

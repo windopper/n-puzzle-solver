@@ -40,7 +40,7 @@ export default function GameBoardInitialNode(param) {
 
   return (
     <>
-      <Toolbar node={node} />
+      <Toolbar node={node} disabledInitialize />
       <div style={{ position: "relative", margin: 5 }}>
         {canControl && (
           <Arrow direction="up" onClick={() => handleMoveTileDirection("up")} />

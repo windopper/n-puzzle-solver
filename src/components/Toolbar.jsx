@@ -1,28 +1,38 @@
-import { FaCheck, FaCopy, FaPaste } from "react-icons/fa";
+import { FaCheck, FaPaste } from "react-icons/fa";
 import usePuzzleCopyPaste from "../hooks/usePuzzleCopyPaste";
 import useMoveTile from "../hooks/useMoveTile";
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
+import { BsThreeDots } from "react-icons/bs";
+import { AppContext } from "../App";
+import { LuGitBranch } from "react-icons/lu";
+import { HiClipboardCopy } from "react-icons/hi";
+import { useViewport } from "@xyflow/react";
 
 const style = {
   toolbar: {
     position: "absolute",
     top: "-50px",
     left: "50%",
-    transform: "translate(-50%, -50%)",
+    transform: "translate(-50%, -50%) scale(1)",
     width: "fit-content",
     display: "flex",
     justifyContent: "center",
-    fontSize: 20,
+    alignItems: "center",
     backgroundColor: "rgb(24 24 27)",
     borderRadius: "25px",
     padding: "4px 4px",
     gap: "5px",
+    width: "20px",
+    height: "10px",
+    color: "rgb(161 161 170)",
+    zIndex: 999,
   },
   button: {
+    position: "relative",
     border: 0,
     borderRadius: "25px",
-    padding: "6px 6px",
+    padding: "3px 3px",
     backgroundColor: "transparent",
     cursor: "pointer",
     display: "flex",
@@ -31,6 +41,9 @@ const style = {
     outline: "none",
     color: "rgb(161 161 170)",
     transition: "color 0.2s",
+    width: "100%",
+    height: "100%",
+    overflow: "hidden",
   },
   popup: {
     fontSize: 12,
@@ -44,13 +57,29 @@ const style = {
     borderRadius: 5,
     userSelect: "none",
     whiteSpace: "nowrap",
+    zIndex: -1,
   },
 };
 
-export default function Toolbar({ node }) {
+export default function Toolbar({
+  node,
+  disabled = false,
+  disabledCopy = false,
+  disabledPaste = false,
+  disabledInitialize = false,
+}) {
+  const { zoom } = useViewport();
+  const scale = 1 / zoom;
   const { handleMoveTileDirection, handleUpdatePuzzle } = useMoveTile(node);
+  const { onInitialize } = useContext(AppContext);
   const { copyPuzzle, pastePuzzle } = usePuzzleCopyPaste();
   const [copyConfirm, setCopyConfirm] = useState(false);
+  const [hover, setHover] = useState(false);
+  const toolBarHoverDebounce = useRef(null);
+
+  const hoverWidth =
+    27 *
+    [disabledCopy, disabledInitialize, disabledPaste].filter((v) => !v).length;
 
   useEffect(() => {
     const timer = setTimeout(() => {
@@ -61,31 +90,101 @@ export default function Toolbar({ node }) {
 
   return (
     <AnimatePresence>
-      <motion.div style={style.toolbar}>
-        <Button
-          onClick={() => {
-            copyPuzzle(node);
-            setCopyConfirm(true);
+      {!disabled && (
+        <motion.div
+          style={style.toolbar}
+          initial={{ opacity: 0, width: "2px", height: "2px" }}
+          animate={{
+            opacity: 1,
+            width: `${20 * scale}px`,
+            height: `${10 * scale}px`,
+            borderRadius: `${25 * scale}px`,
+            padding: `${4 * scale}px ${4 * scale}px`,
+            gap: `${4 * scale}px`,
           }}
-          popUpContent="퍼즐 복사"
-        >
-          {copyConfirm ? <FaCheck color="lightgreen" /> : <FaCopy />}
-        </Button>
-        <Button
-          onClick={async () => {
-            const puzzle = await pastePuzzle();
-            if (puzzle) handleUpdatePuzzle(puzzle);
+          exit={{ opacity: 0, width: "2px", height: "2px" }}
+          whileHover={{
+            width: `${hoverWidth * scale}px`,
+            height: `${25 * scale}px`,
           }}
-          popUpContent="퍼즐 붙여넣기"
+          onHoverStart={() => {
+            setHover(true);
+          }}
+          onHoverEnd={() => {
+            setHover(false);
+          }}
+          transition={{
+            type: "spring",
+            bounce: 0.05,
+            duration: 0.35,
+          }}
         >
-          <FaPaste />
-        </Button>
-      </motion.div>
+          {!hover && (
+            <motion.div
+              style={{ display: "flex", alignItems: "center" }}
+              initial={{
+                opacity: 0,
+              }}
+              animate={{
+                opacity: 1,
+              }}
+              exit={{
+                opacity: 0,
+              }}
+            >
+              <BsThreeDots size={`${20 * scale}px`} />
+            </motion.div>
+          )}
+          {hover && (
+            <>
+              {!disabledCopy && (
+                <Button
+                  onClick={() => {
+                    copyPuzzle(node);
+                    setCopyConfirm(true);
+                  }}
+                  popUpContent="퍼즐 복사"
+                  scale={scale}
+                >
+                  {copyConfirm ? (
+                    <FaCheck color="lightgreen" size="100%" />
+                  ) : (
+                    <HiClipboardCopy size={`${20 * scale}px`} />
+                  )}
+                </Button>
+              )}
+              {!disabledInitialize && (
+                <Button
+                  onClick={() => {
+                    onInitialize(node.puzzle);
+                  }}
+                  popUpContent="초기 지점 설정"
+                  scale={scale}
+                >
+                  <LuGitBranch size={`${20 * scale}px`} />
+                </Button>
+              )}
+              {!disabledPaste && (
+                <Button
+                  onClick={async () => {
+                    const puzzle = await pastePuzzle();
+                    if (puzzle) handleUpdatePuzzle(puzzle);
+                  }}
+                  popUpContent="퍼즐 붙여넣기"
+                  scale={scale}
+                >
+                  <FaPaste size={`${20 * scale}px`} />
+                </Button>
+              )}
+            </>
+          )}
+        </motion.div>
+      )}
     </AnimatePresence>
   );
 }
 
-function Button({ children, onClick, props, popUpContent }) {
+function Button({ children, onClick, popUpContent, scale, ...props }) {
   const [popup, setPopup] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
 
@@ -99,11 +198,16 @@ function Button({ children, onClick, props, popUpContent }) {
   }, [popup]);
 
   return (
-    <div style={{ position: "relative" }}>
+    <>
       <AnimatePresence>
         {popUpContent && showPopup && (
           <motion.div
-            style={style.popup}
+            style={{
+              ...style.popup,
+              fontSize: 12 * scale,
+              padding: `${4 * scale}px ${8 * scale}px`,
+              borderRadius: `${5 * scale}px`,
+            }}
             initial={{
               opacity: 0,
             }}
@@ -114,28 +218,37 @@ function Button({ children, onClick, props, popUpContent }) {
               opacity: 0,
             }}
           >
-           {popUpContent}
+            {popUpContent}
           </motion.div>
         )}
       </AnimatePresence>
-      <button
-        style={style.button}
-        onClick={onClick}
-        onPointerEnter={(e) => {
-          e.currentTarget.style.color = "rgb(244 244 245)";
-          e.currentTarget.style.backgroundColor = "rgb(39 39 42)";
-          setPopup(true);
+      <div
+        style={{
+          position: "relative",
+          height: "100%",
+          aspectRatio: 1,
+          overflow: "hidden",
         }}
-        onPointerLeave={(e) => {
-          e.currentTarget.style.color = "rgb(161 161 170)";
-          e.currentTarget.style.backgroundColor = "transparent";
-          setPopup(false);
-          setShowPopup(false);
-        }}
-        {...props}
       >
-        {children}
-      </button>
-    </div>
+        <button
+          style={style.button}
+          onClick={onClick}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.color = "rgb(244 244 245)";
+            e.currentTarget.style.backgroundColor = "rgb(39 39 42)";
+            setPopup(true);
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.color = "rgb(161 161 170)";
+            e.currentTarget.style.backgroundColor = "transparent";
+            setPopup(false);
+            setShowPopup(false);
+          }}
+          {...props}
+        >
+          {children}
+        </button>
+      </div>
+    </>
   );
 }
