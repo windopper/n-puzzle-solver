@@ -4,6 +4,12 @@ on:
     push:
         branches:
             - master
+        paths:
+            - 'src/**'
+            - 'public/**'
+            - 'package.json'
+            - 'package-lock.json'
+            - '.github/workflows/deploy.yml'
 
 jobs:
     deploy:
