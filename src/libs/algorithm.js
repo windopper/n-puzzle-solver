@@ -176,7 +176,11 @@ async function* solveWithBFS(initialNode) {
     attempts++;
 
     if (isGoal(node.puzzle)) {
-      const result = new Result(attempts, node.depth, Object.keys(closedSet).length);
+      const result = new Result(
+        attempts,
+        node.depth,
+        Object.keys(closedSet).length
+      );
       result.last_node = node;
       return result;
     }
@@ -223,22 +227,26 @@ async function* solveWithAStarClosedSet(initialNode) {
   const goalState = createGoalState(initialNode.puzzle.length);
   const goalMapping = createGoalMapping(goalState);
 
-  const h = (node) => {
-    return node.depth + manhattanDistance(node.puzzle, goalMapping);
-  };
+  const g = (node) => node.depth;
+  const h = (node) => manhattanDistance(node.puzzle, goalMapping);
+  const f = (node) => g(node) + h(node);
 
   const openList = [];
   const closedSet = {};
   let attempts = 0;
 
-  priorityEnqueue(openList, initialNode, h(initialNode));
+  priorityEnqueue(openList, initialNode, f(initialNode));
 
   while (!(openList.length === 0)) {
     const { node, cost } = openList.shift();
     attempts++;
 
     if (isGoal(node.puzzle)) {
-      const result = new Result(attempts, node.depth, Object.keys(closedSet).length);
+      const result = new Result(
+        attempts,
+        node.depth,
+        Object.keys(closedSet).length
+      );
       result.last_node = node;
       return result;
     }
@@ -269,11 +277,11 @@ async function* solveWithAStarClosedSet(initialNode) {
           openList.splice(openNeighborIndex, 1);
           node.children.push(childNode);
 
-          priorityEnqueue(openList, childNode, h(childNode));
+          priorityEnqueue(openList, childNode, f(childNode));
         }
       } else {
         node.children.push(childNode);
-        priorityEnqueue(openList, childNode, h(childNode));
+        priorityEnqueue(openList, childNode, f(childNode));
       }
     }
 
@@ -303,7 +311,7 @@ async function* solveWithGreedy(initialNode) {
   const goalState = createGoalState(initialNode.puzzle.length);
   const goalMapping = createGoalMapping(goalState);
 
-  const h = (node) => {
+  const f = (node) => {
     return manhattanDistance(node.puzzle, goalMapping);
   };
 
@@ -312,14 +320,18 @@ async function* solveWithGreedy(initialNode) {
 
   let attempts = 0;
 
-  priorityEnqueue(openList, initialNode, h(initialNode));
+  priorityEnqueue(openList, initialNode, f(initialNode));
 
   while (openList.length > 0) {
     const { node } = openList.shift();
     attempts++;
 
     if (isGoal(node.puzzle)) {
-      const result = new Result(attempts, node.depth, Object.keys(closedSet).length);
+      const result = new Result(
+        attempts,
+        node.depth,
+        Object.keys(closedSet).length
+      );
       result.last_node = node;
       return result;
     }
@@ -332,12 +344,12 @@ async function* solveWithGreedy(initialNode) {
         continue;
       }
 
-      closedSet[puzzleKey] = 1; 
+      closedSet[puzzleKey] = 1;
 
       const childNode = new PuzzleState(newPuzzle, node, direction);
       childNode.depth = node.depth + 1;
       node.children.push(childNode);
-      priorityEnqueue(openList, childNode, h(childNode));
+      priorityEnqueue(openList, childNode, f(childNode));
     }
 
     if (attempts % 100 === 0) {
